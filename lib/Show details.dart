@@ -90,7 +90,7 @@ class ShowInventoryScreen extends StatelessWidget {
       ),
     );
   }
-
+//hjhg
   Widget _buildInfoRow(String label, String value, {bool isTotal = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
