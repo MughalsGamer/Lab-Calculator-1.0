@@ -1,39 +1,3 @@
-// class CustomerModel {
-//   String id;
-//   final String customerName;
-//   final String phone;
-//   final String address;
-//   final String date;
-//
-//   CustomerModel({
-//     required this.id,
-//     required this.customerName,
-//     required this.phone,
-//     required this.address,
-//     required this.date,
-//   });
-//
-//   factory CustomerModel.fromMap(Map<String, dynamic> map) {
-//     return CustomerModel(
-//       id:  map['id'] ?? '',
-//       customerName: map['customerName'] ?? '',
-//       phone: map['phone'] ?? '',
-//       address: map['address'] ?? '',
-//       date: map['date'] ?? '',
-//     );
-//   }
-//
-//   Map<String, dynamic> toMap() {
-//     return {
-//       'id': id,
-//       'customerName': customerName,
-//       'phone': phone,
-//       'address': address,
-//       'date': date,
-//     };
-//   }
-// }
-
 class CustomerModel {
   String id;
   final String customerName;

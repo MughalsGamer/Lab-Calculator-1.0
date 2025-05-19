@@ -8,7 +8,7 @@ import 'Show details.dart';
 class Showinventorylistscreen extends StatefulWidget {
   final List<Map<String, dynamic>> inventoryList;
 
-  Showinventorylistscreen({super.key, required this.inventoryList});
+  const Showinventorylistscreen({super.key, required this.inventoryList});
 
   @override
   State<Showinventorylistscreen> createState() => _ShowinventorylistscreenState();
