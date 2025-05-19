@@ -79,7 +79,7 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
         itemBuilder: (context, index) {
           final customerName = customerInventories.keys.elementAt(index);
           final inventories = customerInventories[customerName]!;
-
+//hjgjh
           return Card(
             elevation: 4,
             margin: const EdgeInsets.symmetric(vertical: 8),
