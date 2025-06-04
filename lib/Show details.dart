@@ -80,10 +80,10 @@ class ShowInventoryScreen extends StatelessWidget {
 
             _buildInfoRow('Rate per sq.ft:', 'Rs. $rate'),
             _buildInfoRow('Additional Charges:', 'Rs. $additionalCharges'),
-            _buildInfoRow('Advance Payment:', 'Rs. -$advance'),
+            _buildInfoRow('Advance Payment:', 'Rs. $advance'),
             const SizedBox(height: 20),
             _buildInfoRow('Total Square Feet:', '$totalSqFt sq.ft', isTotal: true),
-            _buildInfoRow('Total Amount:', 'Rs. -$totalAmount', isTotal: true),
+            _buildInfoRow('Total Amount:', 'Rs. $totalAmount', isTotal: true),
             _buildInfoRow('Remaining Balance:', 'Rs. $remainingBalance', isTotal: true),
           ],
         ),
