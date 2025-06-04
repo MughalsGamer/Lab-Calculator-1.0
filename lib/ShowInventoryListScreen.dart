@@ -19,6 +19,12 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
   final _ref = FirebaseDatabase.instance.ref().child('customers');
   List<CustomerModel> alldata = [];
 
+  @override
+  void initState() {
+    super.initState();
+    fetchData();
+  }
+
   void fetchData() {
     _ref.onValue.listen((event) {
       final data = event.snapshot.value;
@@ -59,7 +65,6 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
             .child(model.inventoryKey!)
             .remove();
 
-        // Update local state immediately
         setState(() {
           alldata.removeWhere((item) =>
           item.customerKey == model.customerKey &&
@@ -70,12 +75,20 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
           msg: "Inventory deleted successfully",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0,
         );
       } else {
         Fluttertoast.showToast(
           msg: "Error: Missing customer or inventory key",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
         );
       }
     } catch (e) {
@@ -83,9 +96,14 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
         msg: "Failed to delete inventory: ${e.toString()}",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
+
   void _showEditDialog(CustomerModel model) {
     final nameController = TextEditingController(text: model.customerName);
     final phoneController = TextEditingController(text: model.phone);
@@ -115,9 +133,24 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
                   TextField(controller: dateController, decoration: const InputDecoration(labelText: 'Date')),
                   TextField(controller: roomController, decoration: const InputDecoration(labelText: 'Room')),
                   TextField(controller: fileTypeController, decoration: const InputDecoration(labelText: 'File Type')),
-                  TextField(controller: rateController, decoration: const InputDecoration(labelText: 'Rate'), keyboardType: TextInputType.number),
-                  TextField(controller: additionalChargesController, decoration: const InputDecoration(labelText: 'Additional Charges'), keyboardType: TextInputType.number),
-                  TextField(controller: advanceController, decoration: const InputDecoration(labelText: 'Advance'), keyboardType: TextInputType.number),
+                  TextField(
+                    controller: rateController,
+                    decoration: const InputDecoration(labelText: 'Rate'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => _updateCalculations(),
+                  ),
+                  TextField(
+                    controller: additionalChargesController,
+                    decoration: const InputDecoration(labelText: 'Additional Charges'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => _updateCalculations(),
+                  ),
+                  TextField(
+                    controller: advanceController,
+                    decoration: const InputDecoration(labelText: 'Advance'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => _updateCalculations(),
+                  ),
 
                   const SizedBox(height: 16),
                   const Text('Dimensions:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -137,6 +170,7 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
                                 onChanged: (value) {
                                   editedDimensions[index]['width'] = double.tryParse(value) ?? 0;
                                   _calculateDimensionSqFt(index, editedDimensions, setState);
+                                  _updateCalculations();
                                 },
                               ),
                             ),
@@ -149,6 +183,7 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
                                 onChanged: (value) {
                                   editedDimensions[index]['height'] = double.tryParse(value) ?? 0;
                                   _calculateDimensionSqFt(index, editedDimensions, setState);
+                                  _updateCalculations();
                                 },
                               ),
                             ),
@@ -159,6 +194,15 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
                       ],
                     );
                   }).toList(),
+                  const SizedBox(height: 10),
+                  _buildCalculationRow('Total Sq.ft:', _calculateTotalSqFt(editedDimensions).toStringAsFixed(2)),
+                  _buildCalculationRow('Total Amount:',
+                      ((double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) +
+                          (double.tryParse(additionalChargesController.text) ?? 0)).toStringAsFixed(2)),
+                  _buildCalculationRow('Remaining Balance:',
+                      (((double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) +
+                          (double.tryParse(additionalChargesController.text) ?? 0)) -
+                          (double.tryParse(advanceController.text) ?? 0)).toStringAsFixed(2)),
                 ],
               ),
             ),
@@ -182,8 +226,11 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
                       'advance': double.tryParse(advanceController.text) ?? 0,
                       'dimensions': editedDimensions,
                       'totalSqFt': _calculateTotalSqFt(editedDimensions),
-                      'totalAmount': (double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) + (double.tryParse(additionalChargesController.text) ?? 0),
-                      'remainingBalance': ((double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) + (double.tryParse(additionalChargesController.text) ?? 0)) - (double.tryParse(advanceController.text) ?? 0),
+                      'totalAmount': (double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) +
+                          (double.tryParse(additionalChargesController.text) ?? 0),
+                      'remainingBalance': ((double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) +
+                          (double.tryParse(additionalChargesController.text) ?? 0)) -
+                          (double.tryParse(advanceController.text) ?? 0),
                     };
 
                     if (model.customerKey != null && model.inventoryKey != null) {
@@ -197,6 +244,10 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
                         msg: "Inventory updated successfully",
                         toastLength: Toast.LENGTH_SHORT,
                         gravity: ToastGravity.BOTTOM,
+                        timeInSecForIosWeb: 1,
+                        backgroundColor: Colors.green,
+                        textColor: Colors.white,
+                        fontSize: 16.0,
                       );
                       Navigator.pop(context);
                     }
@@ -205,6 +256,10 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
                       msg: "Failed to update inventory: $e",
                       toastLength: Toast.LENGTH_SHORT,
                       gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
                     );
                   }
                 },
@@ -217,6 +272,23 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
     );
   }
 
+  Widget _buildCalculationRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  void _updateCalculations() {
+    setState(() {});
+  }
+
   void _calculateDimensionSqFt(int index, List<Map<String, dynamic>> dimensions, StateSetter setState) {
     double width = dimensions[index]['width'] ?? 0;
     double height = dimensions[index]['height'] ?? 0;
@@ -226,12 +298,6 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
 
   double _calculateTotalSqFt(List<Map<String, dynamic>> dimensions) {
     return dimensions.fold(0, (sum, dim) => sum + (double.tryParse(dim['sqFt'].toString()) ?? 0));
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    fetchData();
   }
 
   @override
