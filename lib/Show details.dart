@@ -78,13 +78,13 @@ class ShowInventoryScreen extends StatelessWidget {
 
             const Divider(height: 30),
 
-            _buildInfoRow('Rate per sq.ft:', 'PKR-$rate'),
-            _buildInfoRow('Additional Charges:', 'PKR-$additionalCharges'),
-            _buildInfoRow('Advance Payment:', 'PKR-$advance'),
+            _buildInfoRow('Rate per sq.ft:', 'Rs. $rate'),
+            _buildInfoRow('Additional Charges:', 'Rs. $additionalCharges'),
+            _buildInfoRow('Advance Payment:', 'Rs. -$advance'),
             const SizedBox(height: 20),
             _buildInfoRow('Total Square Feet:', '$totalSqFt sq.ft', isTotal: true),
-            _buildInfoRow('Total Amount:', 'PKR-$totalAmount', isTotal: true),
-            _buildInfoRow('Remaining Balance:', 'PKR-$remainingBalance', isTotal: true),
+            _buildInfoRow('Total Amount:', 'Rs. -$totalAmount', isTotal: true),
+            _buildInfoRow('Remaining Balance:', 'Rs. $remainingBalance', isTotal: true),
           ],
         ),
       ),
@@ -111,3 +111,4 @@ class ShowInventoryScreen extends StatelessWidget {
     );
   }
 }
+//dsfdsfsd

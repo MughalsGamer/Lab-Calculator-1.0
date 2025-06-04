@@ -13,7 +13,7 @@ import 'Show details.dart';
 class Showinventorylistscreen extends StatefulWidget {
   final List<Map<String, dynamic>> inventoryList;
 
-  Showinventorylistscreen({super.key, required this.inventoryList});
+  const Showinventorylistscreen({super.key, required this.inventoryList});
 
   @override
   State<Showinventorylistscreen> createState() => _ShowinventorylistscreenState();
@@ -84,7 +84,7 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
         itemBuilder: (context, index) {
           final customerName = customerInventories.keys.elementAt(index);
           final inventories = customerInventories[customerName]!;
-
+//hjgjh
           return Card(
             elevation: 4,
             margin: const EdgeInsets.symmetric(vertical: 8),
