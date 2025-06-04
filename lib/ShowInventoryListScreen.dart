@@ -503,13 +503,14 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Date: ${model.date}'),
+              Text('Date: ${model.date}',style: TextStyle(fontSize: 12),),
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.picture_as_pdf, color: Colors.green),
+                    icon: const Icon(Icons.picture_as_pdf, color: Colors.green,),
                     onPressed: () => _generateAndSharePdf(model),
                   ),
                   IconButton(
