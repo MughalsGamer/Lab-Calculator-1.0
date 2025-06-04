@@ -1,10 +1,6 @@
-
-
-
-
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import 'First Page.dart';
 import 'Model class.dart';
@@ -20,8 +16,6 @@ class Showinventorylistscreen extends StatefulWidget {
 }
 
 class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
-
-
   final _ref = FirebaseDatabase.instance.ref().child('customers');
   List<CustomerModel> alldata = [];
 
@@ -40,7 +34,10 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
             inventories.forEach((inventoryKey, inventoryValue) {
               if (inventoryValue is Map) {
                 final inventoryMap = Map<String, dynamic>.from(inventoryValue);
-                fetchdata.add(CustomerModel.fromMap(inventoryMap));
+                final model = CustomerModel.fromMap(inventoryMap);
+                model.customerKey = customerKey;
+                model.inventoryKey = inventoryKey;
+                fetchdata.add(model);
               }
             });
           }
@@ -53,12 +50,188 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
     });
   }
 
+  Future<void> _deleteInventory(CustomerModel model) async {
+    try {
+      if (model.customerKey != null && model.inventoryKey != null) {
+        await _ref
+            .child(model.customerKey!)
+            .child('inventory')
+            .child(model.inventoryKey!)
+            .remove();
 
+        // Update local state immediately
+        setState(() {
+          alldata.removeWhere((item) =>
+          item.customerKey == model.customerKey &&
+              item.inventoryKey == model.inventoryKey);
+        });
+
+        Fluttertoast.showToast(
+          msg: "Inventory deleted successfully",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: "Error: Missing customer or inventory key",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to delete inventory: ${e.toString()}",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    }
+  }
+  void _showEditDialog(CustomerModel model) {
+    final nameController = TextEditingController(text: model.customerName);
+    final phoneController = TextEditingController(text: model.phone);
+    final addressController = TextEditingController(text: model.address);
+    final dateController = TextEditingController(text: model.date);
+    final roomController = TextEditingController(text: model.room);
+    final fileTypeController = TextEditingController(text: model.fileType);
+    final rateController = TextEditingController(text: model.rate.toString());
+    final additionalChargesController = TextEditingController(text: model.additionalCharges.toString());
+    final advanceController = TextEditingController(text: model.advance.toString());
+
+    List<Map<String, dynamic>> editedDimensions = List.from(model.dimensions);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Edit Inventory'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Customer Name')),
+                  TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Phone')),
+                  TextField(controller: addressController, decoration: const InputDecoration(labelText: 'Address')),
+                  TextField(controller: dateController, decoration: const InputDecoration(labelText: 'Date')),
+                  TextField(controller: roomController, decoration: const InputDecoration(labelText: 'Room')),
+                  TextField(controller: fileTypeController, decoration: const InputDecoration(labelText: 'File Type')),
+                  TextField(controller: rateController, decoration: const InputDecoration(labelText: 'Rate'), keyboardType: TextInputType.number),
+                  TextField(controller: additionalChargesController, decoration: const InputDecoration(labelText: 'Additional Charges'), keyboardType: TextInputType.number),
+                  TextField(controller: advanceController, decoration: const InputDecoration(labelText: 'Advance'), keyboardType: TextInputType.number),
+
+                  const SizedBox(height: 16),
+                  const Text('Dimensions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...editedDimensions.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    Map<String, dynamic> dim = entry.value;
+                    return Column(
+                      children: [
+                        Text('Wall ${index + 1}'),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: TextEditingController(text: dim['width'].toString()),
+                                decoration: const InputDecoration(labelText: 'Width'),
+                                keyboardType: TextInputType.number,
+                                onChanged: (value) {
+                                  editedDimensions[index]['width'] = double.tryParse(value) ?? 0;
+                                  _calculateDimensionSqFt(index, editedDimensions, setState);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextField(
+                                controller: TextEditingController(text: dim['height'].toString()),
+                                decoration: const InputDecoration(labelText: 'Height'),
+                                keyboardType: TextInputType.number,
+                                onChanged: (value) {
+                                  editedDimensions[index]['height'] = double.tryParse(value) ?? 0;
+                                  _calculateDimensionSqFt(index, editedDimensions, setState);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text('Sq.ft: ${editedDimensions[index]['sqFt']}'),
+                        const Divider(),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    final updatedData = {
+                      'customerName': nameController.text,
+                      'phone': phoneController.text,
+                      'address': addressController.text,
+                      'date': dateController.text,
+                      'room': roomController.text,
+                      'fileType': fileTypeController.text,
+                      'rate': double.tryParse(rateController.text) ?? 0,
+                      'additionalCharges': double.tryParse(additionalChargesController.text) ?? 0,
+                      'advance': double.tryParse(advanceController.text) ?? 0,
+                      'dimensions': editedDimensions,
+                      'totalSqFt': _calculateTotalSqFt(editedDimensions),
+                      'totalAmount': (double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) + (double.tryParse(additionalChargesController.text) ?? 0),
+                      'remainingBalance': ((double.tryParse(rateController.text) ?? 0) * _calculateTotalSqFt(editedDimensions) + (double.tryParse(additionalChargesController.text) ?? 0)) - (double.tryParse(advanceController.text) ?? 0),
+                    };
+
+                    if (model.customerKey != null && model.inventoryKey != null) {
+                      await _ref
+                          .child(model.customerKey!)
+                          .child('inventory')
+                          .child(model.inventoryKey!)
+                          .update(updatedData);
+
+                      Fluttertoast.showToast(
+                        msg: "Inventory updated successfully",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.BOTTOM,
+                      );
+                      Navigator.pop(context);
+                    }
+                  } catch (e) {
+                    Fluttertoast.showToast(
+                      msg: "Failed to update inventory: $e",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                    );
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _calculateDimensionSqFt(int index, List<Map<String, dynamic>> dimensions, StateSetter setState) {
+    double width = dimensions[index]['width'] ?? 0;
+    double height = dimensions[index]['height'] ?? 0;
+    dimensions[index]['sqFt'] = (width * height).toStringAsFixed(2);
+    setState(() {});
+  }
+
+  double _calculateTotalSqFt(List<Map<String, dynamic>> dimensions) {
+    return dimensions.fold(0, (sum, dim) => sum + (double.tryParse(dim['sqFt'].toString()) ?? 0));
+  }
 
   @override
   void initState() {
     super.initState();
-    fetchData(); // Start listening to Firebases
+    fetchData();
   }
 
   @override
@@ -66,7 +239,7 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
     final Map<String, List<CustomerModel>> customerInventories = {};
 
     for (var model in alldata) {
-      final customerName = model.customerName ?? 'Unknown';
+      final customerName = model.customerName;
       if (!customerInventories.containsKey(customerName)) {
         customerInventories[customerName] = [];
       }
@@ -84,7 +257,7 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
         itemBuilder: (context, index) {
           final customerName = customerInventories.keys.elementAt(index);
           final inventories = customerInventories[customerName]!;
-//hjgjh
+
           return Card(
             elevation: 4,
             margin: const EdgeInsets.symmetric(vertical: 8),
@@ -116,12 +289,29 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Date: ${model.date}'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Date: ${model.date}'),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () => _showEditDialog(model),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _confirmDelete(model),
+                  ),
+                ],
+              ),
+            ],
+          ),
           Text('Room: ${model.room}'),
           Text('File Type: ${model.fileType}'),
           const SizedBox(height: 10),
           const Text('Dimensions:', style: TextStyle(fontWeight: FontWeight.bold)),
-          for (var dim in model.dimensions ?? [])
+          for (var dim in model.dimensions)
             Padding(
               padding: const EdgeInsets.only(left: 8.0),
               child: Row(
@@ -137,6 +327,29 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
           ElevatedButton(
             onPressed: () => _navigateToDetailScreen(context, model),
             child: const Text('View Details'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(CustomerModel model) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: const Text('Are you sure you want to delete this inventory?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              _deleteInventory(model);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -165,7 +378,6 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
       ),
     );
   }
-
 
   Widget _buildInfoRow(String label, String value, {bool isTotal = false}) {
     return Padding(
