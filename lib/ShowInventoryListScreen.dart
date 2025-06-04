@@ -1,6 +1,11 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import 'First Page.dart';
 import 'Model class.dart';
@@ -102,6 +107,148 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
         fontSize: 16.0,
       );
     }
+  }
+
+  Future<void> _generateAndSharePdf(CustomerModel model) async {
+    try {
+      final pdf = pw.Document();
+
+      // Add a page to the PDF
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Header(
+                  level: 0,
+                  child: pw.Text('Inventory Details',
+                      style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 20),
+                _buildPdfDetailRow('Customer Name:', model.customerName),
+                _buildPdfDetailRow('Phone:', model.phone),
+                _buildPdfDetailRow('Address:', model.address),
+                _buildPdfDetailRow('Date:', model.date),
+                _buildPdfDetailRow('Room:', model.room),
+                _buildPdfDetailRow('File Type:', model.fileType),
+                pw.SizedBox(height: 20),
+                pw.Text('Dimensions:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  children: [
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          child: pw.Text('Wall', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                        pw.Padding(
+                          child: pw.Text('Width (ft)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                        pw.Padding(
+                          child: pw.Text('Height (ft)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                        pw.Padding(
+                          child: pw.Text('Sq.ft', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                      ],
+                    ),
+                    ...model.dimensions.map((dim) => pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          child: pw.Text(dim['wall'] ?? 'Wall'),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                        pw.Padding(
+                          child: pw.Text(dim['width'].toString()),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                        pw.Padding(
+                          child: pw.Text(dim['height'].toString()),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                        pw.Padding(
+                          child: pw.Text(dim['sqFt'].toString()),
+                          padding: pw.EdgeInsets.all(4),
+                        ),
+                      ],
+                    )),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                _buildPdfAmountRow('Rate per Sq.ft:', 'Rs${model.rate}'),
+                _buildPdfAmountRow('Total Sq.ft:', '${model.totalSqFt} sq.ft'),
+                _buildPdfAmountRow('Additional Charges:', 'Rs${model.additionalCharges}'),
+                _buildPdfAmountRow('Total Amount:', 'Rs${model.totalAmount}'),
+                _buildPdfAmountRow('Advance:', 'Rs${model.advance}'),
+                _buildPdfAmountRow('Remaining Balance:', 'Rs${model.remainingBalance}',
+                    isTotal: true),
+                pw.SizedBox(height: 20),
+                pw.Center(
+                  child: pw.Text('Thank you for your business!',
+                      style: pw.TextStyle(fontStyle: pw.FontStyle.italic)),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Save the PDF to a temporary file
+      final output = await getTemporaryDirectory();
+      final file = File('${output.path}/inventory_${model.customerName}_${model.date}.pdf');
+      await file.writeAsBytes(await pdf.save());
+
+      // Share the PDF
+      await Printing.sharePdf(
+        bytes: await file.readAsBytes(),
+        filename: 'inventory_${model.customerName}_${model.date}.pdf',
+      );
+
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to generate PDF: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    }
+  }
+
+  pw.Widget _buildPdfDetailRow(String label, String value) {
+    return pw.Row(
+      children: [
+        pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(width: 10),
+        pw.Text(value),
+      ],
+    );
+  }
+
+  pw.Widget _buildPdfAmountRow(String label, String value, {bool isTotal = false}) {
+    return pw.Padding(
+      padding: pw.EdgeInsets.symmetric(vertical: 4),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(label, style: pw.TextStyle(
+            fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
+          )),
+          pw.Text(value, style: pw.TextStyle(
+            fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
+          )),
+        ],
+      ),
+    );
   }
 
   void _showEditDialog(CustomerModel model) {
@@ -361,6 +508,10 @@ class _ShowinventorylistscreenState extends State<Showinventorylistscreen> {
               Text('Date: ${model.date}'),
               Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf, color: Colors.green),
+                    onPressed: () => _generateAndSharePdf(model),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.blue),
                     onPressed: () => _showEditDialog(model),
