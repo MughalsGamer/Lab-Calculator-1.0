@@ -79,7 +79,7 @@ class _FirstPageState extends State<FirstPage> {
             const SizedBox(height: 50),
             _buildTextField(_customerNameController, 'Customer Name'),
             const SizedBox(height: 10),
-            _buildTextField(_phoneController, 'Phone', keyboardType: TextInputType.phone),
+            _buildTextField(_phoneController, 'Phone', keyboardType: TextInputType.phone,),
             const SizedBox(height: 10),
             _buildTextField(_addressController, 'Address', maxLines: 2),
             const SizedBox(height: 10),
