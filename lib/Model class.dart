@@ -1,5 +1,5 @@
 class CustomerModel {
-  String id;
+  String? id;
   String? customerKey;
   String? inventoryKey;
   final String customerName;
@@ -17,7 +17,7 @@ class CustomerModel {
   final List<Map<String, dynamic>> dimensions;
 
   CustomerModel({
-    required this.id,
+    this.id,
     required this.customerName,
     required this.phone,
     required this.address,
@@ -31,19 +31,19 @@ class CustomerModel {
     required this.totalAmount,
     required this.remainingBalance,
     required this.dimensions,
-    required this.customerKey,
-    required this.inventoryKey,
+    this.customerKey,
+    this.inventoryKey,
   });
 
   factory CustomerModel.fromMap(Map<String, dynamic> map) {
     return CustomerModel(
-      id: map['id'] ?? '',
-      customerName: map['customerName'] ?? '',
-      phone: map['phone'] ?? '',
-      address: map['address'] ?? '',
-      date: map['date'] ?? '',
-      room: map['room'] ?? '',
-      fileType: map['fileType'] ?? '',
+      id: map['id']?.toString() ?? '',
+      customerName: map['customerName']?.toString() ?? '',
+      phone: map['phone']?.toString() ?? '',
+      address: map['address']?.toString() ?? '',
+      date: map['date']?.toString() ?? '',
+      room: map['room']?.toString() ?? '',
+      fileType: map['fileType']?.toString() ?? '',
       rate: double.tryParse(map['rate'].toString()) ?? 0.0,
       additionalCharges: double.tryParse(map['additionalCharges'].toString()) ?? 0.0,
       advance: double.tryParse(map['advance'].toString()) ?? 0.0,
@@ -54,11 +54,10 @@ class CustomerModel {
           ?.map((e) => Map<String, dynamic>.from(e))
           .toList() ??
           [],
-      customerKey: map['customerKey']?.toString() ?? '',
-      inventoryKey: map['inventoryKey']?.toString() ?? '',
+      customerKey: map['customerKey']?.toString(),
+      inventoryKey: map['inventoryKey']?.toString(),
     );
   }
-
 
   Map<String, dynamic> toMap() {
     return {

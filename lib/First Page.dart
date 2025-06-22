@@ -1,8 +1,10 @@
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
+
+import 'ShowInventoryListScreen.dart';
 import 'inventory app.dart';
-import 'ShowInventoryListScreen.dart'; // Make sure to import this
+
 
 class FirstPage extends StatefulWidget {
   const FirstPage({super.key});
@@ -26,7 +28,7 @@ class _FirstPageState extends State<FirstPage> {
 
   void _setCurrentDateTime() {
     final now = DateTime.now();
-    final formatted = DateFormat('dd-MM-yyyy hh:mm a').format(now);
+    final formatted = DateFormat('dd MMM yyyy, hh:mm a').format(now);
     _dateController.text = formatted;
   }
 
@@ -41,87 +43,85 @@ class _FirstPageState extends State<FirstPage> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       body: Container(
-        width: size.width,
-        height: size.height,
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
-        decoration: const BoxDecoration(
-          color: Colors.black,
-          image: DecorationImage(
-            image: AssetImage("assets/images/11.jpg"),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.grey[900]!, Colors.black],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
                 const SizedBox(height: 30),
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
-              ),
-              child: CircleAvatar(
-                radius: 70,
-                backgroundColor: Colors.grey[800],
-                backgroundImage: const NetworkImage(
-                  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdcYJk-OSaTZz_auOIpwG7nLJVus3XoqnspA&s',
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.orange, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.5),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      )
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 70,
+                    backgroundColor: Colors.grey[800],
+                    backgroundImage: const NetworkImage(
+                      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdcYJk-OSaTZz_auOIpwG7nLJVus3XoqnspA&s',
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withOpacity(0.4),
+                      ),
+                    ),
+                  ),
                 ),
-                onBackgroundImageError: (exception, stackTrace) {},
-              ),
-            ),
-            const SizedBox(height: 50),
-            _buildTextField(_customerNameController, 'Customer Name'),
-            const SizedBox(height: 10),
-            _buildTextField(_phoneController, 'Phone', keyboardType: TextInputType.phone,),
-            const SizedBox(height: 10),
-            _buildTextField(_addressController, 'Address', maxLines: 2),
-            const SizedBox(height: 10),
-            _buildTextField(
-              _dateController,
-              'Date',
-              readOnly: true,
-              suffixIcon: const Icon(Icons.access_time, color: Colors.white70),
-            ),
-            const SizedBox(height: 30),
-
-            // Save Button
-            _isLoading
-                ? const CircularProgressIndicator(color: Colors.orange)
-                : ElevatedButton(
-              onPressed: _saveData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text(
-                "Save",
-                style: TextStyle(fontSize: 16, color: Colors.white),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Show All Data Button
-            ElevatedButton(
-              onPressed: _navigateToAllDataScreen,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green, // Different color to distinguish
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text(
-                "Show All Data",
-                style: TextStyle(fontSize: 16, color: Colors.white),
-              ),
-            )
+                const SizedBox(height: 40),
+                Text("Customer Details",
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildInputCard(
+                  title: "Personal Information",
+                  children: [
+                    _buildTextField(_customerNameController, 'Customer Name',
+                        icon: Icons.person_outline),
+                    const SizedBox(height: 12),
+                    _buildTextField(_phoneController, 'Phone Number',
+                        keyboardType: TextInputType.phone,
+                        icon: Icons.phone_android_outlined),
+                    const SizedBox(height: 12),
+                    _buildTextField(_addressController, 'Address',
+                        maxLines: 2,
+                        icon: Icons.location_on_outlined),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildInputCard(
+                  title: "Appointment",
+                  children: [
+                    _buildTextField(
+                      _dateController,
+                      'Date & Time',
+                      readOnly: true,
+                      icon: Icons.calendar_today_outlined,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                _buildActionButtons(),
               ],
             ),
           ),
@@ -130,7 +130,109 @@ class _FirstPageState extends State<FirstPage> {
     );
   }
 
-  // Add this new method to navigate to the all data screen
+  Widget _buildInputCard({required String title, required List<Widget> children}) {
+    return Card(
+      elevation: 4,
+      color: Colors.grey[850],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+              style: const TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      TextEditingController controller,
+      String hintText, {
+        TextInputType? keyboardType,
+        bool readOnly = false,
+        int? maxLines = 1,
+        IconData? icon,
+      }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(color: Colors.white),
+        keyboardType: keyboardType,
+        readOnly: readOnly,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: TextStyle(color: Colors.grey[400]),
+          prefixIcon: icon != null ? Icon(icon, color: Colors.orange) : null,
+          filled: true,
+          fillColor: Colors.transparent,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+        children: [
+    _isLoading
+    ? const CircularProgressIndicator(color: Colors.orange)
+        : SizedBox(
+    width: double.infinity,
+    child: ElevatedButton(
+    onPressed: _saveData,
+    style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.orange,
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12),
+    ),
+    ),
+    child: const Text(
+    "Create New Project",
+    style: TextStyle(fontSize: 16, color: Colors.white),
+    ),
+    ),
+    ),
+    const SizedBox(height: 16),
+    SizedBox(
+    width: double.infinity,
+    child: OutlinedButton(
+    onPressed: _navigateToAllDataScreen,
+    style: OutlinedButton.styleFrom(
+    foregroundColor: Colors.orange,
+    side: const BorderSide(color: Colors.orange),
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12),
+    ),
+
+    ), child: const Text(
+    "View All Projects",
+    style: TextStyle(fontSize: 16),
+    ),
+    )),
+    ],
+    );
+  }
+
   Future<void> _navigateToAllDataScreen() async {
     try {
       setState(() => _isLoading = true);
@@ -163,14 +265,14 @@ class _FirstPageState extends State<FirstPage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => Showinventorylistscreen(
+              builder: (context) => ShowInventoryListScreen(
                 inventoryList: allInventories,
               ),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("No inventory data found")),
+            const SnackBar(content: Text("No project data found")),
           );
         }
       } else {
@@ -186,35 +288,6 @@ class _FirstPageState extends State<FirstPage> {
         SnackBar(content: Text("Error fetching data: ${e.toString()}")),
       );
     }
-  }
-
-  Widget _buildTextField(
-      TextEditingController controller,
-      String hintText, {
-        TextInputType? keyboardType,
-        bool readOnly = false,
-        int? maxLines = 1,
-        Widget? suffixIcon,
-      }) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.white),
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(color: Colors.white70),
-        filled: true,
-        fillColor: Colors.black.withOpacity(0.3),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        suffixIcon: suffixIcon,
-      ),
-    );
   }
 
   Future<void> _saveData() async {
@@ -257,12 +330,13 @@ class _FirstPageState extends State<FirstPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => Inventryapp(
+          builder: (context) => InventoryApp(
             customerId: key,
             customerName: customerName,
             phone: phone,
             address: address,
             date: date,
+            isEditMode: false,
           ),
         ),
       );

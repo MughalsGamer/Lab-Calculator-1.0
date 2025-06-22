@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-class ShowInventoryScreen extends StatelessWidget {
+
+import 'PdfService.dart';
+
+class ShowDetailsScreen extends StatelessWidget {
   final String customerName;
   final String phone;
   final String address;
@@ -15,7 +18,7 @@ class ShowInventoryScreen extends StatelessWidget {
   final String remainingBalance;
   final List<Map<String, String>> dimensions;
 
-  const ShowInventoryScreen({
+  const ShowDetailsScreen({
     super.key,
     required this.customerName,
     required this.phone,
@@ -34,81 +37,166 @@ class ShowInventoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Debug print
-    print("Dimensions in ShowInventoryScreen: ${dimensions.length}");
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inventory Details'),
-        backgroundColor: Colors.orange,
+        title: const Text('Project Details'),
+        backgroundColor: Colors.grey[900],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: () => _generateAndSharePdf(context),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.grey[800]!, Colors.black],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionCard(
+                title: "Customer Information",
+                children: [
+                  _buildInfoRow('Customer:', customerName),
+                  _buildInfoRow('Phone:', phone),
+                  _buildInfoRow('Address:', address),
+                  _buildInfoRow('Date:', date),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildSectionCard(
+                title: "Project Details",
+                children: [
+                  _buildInfoRow('Room:', room),
+                  _buildInfoRow('Material Type:', fileType),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildSectionCard(
+                title: "Dimensions",
+                children: [
+                  if (dimensions.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text('No dimensions available',
+                          style: TextStyle(color: Colors.white70, fontStyle: FontStyle.italic)),
+                    )
+                  else
+                    for (var dim in dimensions)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${dim['wall']}: ${dim['width']} x ${dim['height']} ft',
+                                style: const TextStyle(color: Colors.white70)),
+                            Text('${dim['sqFt']} sq.ft', style: const TextStyle(color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildSectionCard(
+                title: "Financial Summary",
+                children: [
+                  _buildInfoRow('Rate per sq.ft:', 'Rs $rate'),
+                  _buildInfoRow('Total Area:', '$totalSqFt sq.ft'),
+                  _buildInfoRow('Additional Charges:', 'Rs $additionalCharges'),
+                  _buildInfoRow('Advance Payment:', 'Rs $advance'),
+                  const Divider(color: Colors.grey, height: 30),
+                  _buildInfoRow('Total Amount:', 'Rs $totalAmount', isTotal: true),
+                  _buildInfoRow('Remaining Balance:', 'Rs $remainingBalance',
+                      isTotal: true, isHighlight: true),
+                ],
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({required String title, required List<Widget> children}) {
+    return Card(
+      elevation: 4,
+      color: Colors.grey[850],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('Customer:', customerName),
-            _buildInfoRow('Phone:', phone),
-            _buildInfoRow('Address:', address),
-            _buildInfoRow('Date:', date),
-            const Divider(height: 30),
-
-            _buildInfoRow('Room:', room),
-            _buildInfoRow('File Type:', fileType),
-            const SizedBox(height: 20),
-
-            const Text('Dimensions:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-
-            if (dimensions.isEmpty)
-              const Text('No dimensions available', style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic))
-            else
-              for (var dim in dimensions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${dim['wall'] ?? "Wall"}: ${dim['width'] ?? "0"} x ${dim['height'] ?? "0"} ft',
-                          style: const TextStyle(fontSize: 16)),
-                      Text('${dim['sqFt'] ?? "0"} sq.ft', style: const TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                ),
-
-            const Divider(height: 30),
-
-            _buildInfoRow('Rate per sq.ft:', 'Rs. $rate'),
-            _buildInfoRow('Additional Charges:', 'Rs. $additionalCharges'),
-            _buildInfoRow('Advance Payment:', 'Rs. $advance'),
-            const SizedBox(height: 20),
-            _buildInfoRow('Total Square Feet:', '$totalSqFt sq.ft', isTotal: true),
-            _buildInfoRow('Total Amount:', 'Rs. $totalAmount', isTotal: true),
-            _buildInfoRow('Remaining Balance:', 'Rs. $remainingBalance', isTotal: true),
+            Text(title,
+              style: const TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...children,
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {bool isTotal = false}) {
+  Widget _buildInfoRow(String label, String value,
+      {bool isTotal = false, bool isHighlight = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(
-            fontSize: 16,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              fontSize: 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: isHighlight ? Colors.orange : Colors.white70
           )),
           Text(value, style: TextStyle(
-            fontSize: 16,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color: isTotal ? Colors.orange : null,
+              fontSize: 16,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+              color: isHighlight ? Colors.orange : Colors.white
           )),
         ],
       ),
     );
   }
+
+  Future<void> _generateAndSharePdf(BuildContext context) async {
+    try {
+      final pdfFile = await PdfService.generateInventoryPdf(
+        customerName: customerName,
+        phone: phone,
+        address: address,
+        date: date,
+        room: room,
+        fileType: fileType,
+        rate: rate,
+        additionalCharges: additionalCharges,
+        advance: advance,
+        totalSqFt: totalSqFt,
+        totalAmount: totalAmount,
+        remainingBalance: remainingBalance,
+        dimensions: dimensions,
+      );
+
+      await PdfService.sharePdf(pdfFile);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to generate PDF: ${e.toString()}")),
+      );
+    }
+  }
 }
-//dsfdsfsd
