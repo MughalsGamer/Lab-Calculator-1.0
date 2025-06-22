@@ -106,6 +106,7 @@ class _FirstPageState extends State<FirstPage> {
                     _buildTextField(_addressController, 'Address',
                         maxLines: 2,
                         icon: Icons.location_on_outlined),
+                    _buildClearButton(), // Added clear button here
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -234,6 +235,29 @@ class _FirstPageState extends State<FirstPage> {
     ],
     );
     }
+  Widget _buildClearButton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: SizedBox(
+        width: double.infinity,
+        child: TextButton.icon(
+                    label: const Text(
+            "Clear Text",
+            style: TextStyle(color: Colors.orange, fontSize: 16),
+          ),
+          onPressed: _clearFields,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.orange.withOpacity(0.5)),
+            ),
+          ),
+        ),
+      ),
+    );
+
+  }
 
   Future<void> _navigateToAllDataScreen() async {
     try {
@@ -352,5 +376,13 @@ class _FirstPageState extends State<FirstPage> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _clearFields() {
+    _customerNameController.clear();
+    _phoneController.clear();
+    _addressController.clear();
+    _setCurrentDateTime(); // Reset date to current time
+
   }
 }
