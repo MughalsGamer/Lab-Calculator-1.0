@@ -1,10 +1,10 @@
+// First Page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
-
+import 'Model class.dart';
 import 'ShowInventoryListScreen.dart';
 import 'inventory app.dart';
-
 
 class FirstPage extends StatefulWidget {
   const FirstPage({super.key});
@@ -210,28 +210,30 @@ class _FirstPageState extends State<FirstPage> {
     style: TextStyle(fontSize: 16, color: Colors.white),
     ),
     ),
-    ),
-    const SizedBox(height: 16),
-    SizedBox(
-    width: double.infinity,
-    child: OutlinedButton(
-    onPressed: _navigateToAllDataScreen,
-    style: OutlinedButton.styleFrom(
-    foregroundColor: Colors.orange,
-    side: const BorderSide(color: Colors.orange),
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-    ),
 
-    ), child: const Text(
-    "View All Projects",
-    style: TextStyle(fontSize: 16),
     ),
-    )),
+          const SizedBox(height: 16),
+          SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _navigateToAllDataScreen,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+
+                ), child: const Text(
+                "View All Projects",
+                style: TextStyle(fontSize: 16),
+              ),
+              )
+          ),
     ],
     );
-  }
+    }
 
   Future<void> _navigateToAllDataScreen() async {
     try {
@@ -245,7 +247,7 @@ class _FirstPageState extends State<FirstPage> {
 
       if (snapshot.exists && snapshot.value != null) {
         final data = snapshot.value as Map<dynamic, dynamic>;
-        final List<Map<String, dynamic>> allInventories = [];
+        final List<CustomerModel> allInventories = [];
 
         data.forEach((customerKey, customerValue) {
           if (customerValue is Map && customerValue['inventory'] != null) {
@@ -255,7 +257,8 @@ class _FirstPageState extends State<FirstPage> {
               if (inventoryValue is Map) {
                 final inventory = Map<String, dynamic>.from(inventoryValue);
                 inventory['customerId'] = customerKey;
-                allInventories.add(inventory);
+                inventory['inventoryId'] = inventoryKey;
+                allInventories.add(CustomerModel.fromMap(inventory));
               }
             });
           }

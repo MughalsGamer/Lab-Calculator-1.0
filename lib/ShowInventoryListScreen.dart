@@ -1,7 +1,7 @@
+// ShowInventoryListScreen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-
 import 'First Page.dart';
 import 'Model class.dart';
 import 'PdfService.dart';
@@ -9,7 +9,7 @@ import 'Show details.dart';
 import 'inventory app.dart';
 
 class ShowInventoryListScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> inventoryList;
+  final List<CustomerModel> inventoryList;
 
   const ShowInventoryListScreen({super.key, required this.inventoryList});
 
@@ -24,6 +24,7 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
   @override
   void initState() {
     super.initState();
+    alldata = widget.inventoryList;
     fetchData();
   }
 
@@ -34,7 +35,7 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
 
       if (data != null && data is Map) {
         data.forEach((customerKey, customerValue) {
-          if (customerValue is Map && customerValue.containsKey('inventory')) {
+          if (customerValue is Map && customerValue['inventory'] != null) {
             final customerInfo = Map<String, dynamic>.from(customerValue);
 
             final inventories = Map<String, dynamic>.from(customerInfo['inventory']);
@@ -159,14 +160,15 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, List<CustomerModel>> customerInventories = {};
+    // Group by customer
+    final Map<String, List<CustomerModel>> customerProjects = {};
 
     for (var model in alldata) {
       final customerName = model.customerName;
-      if (!customerInventories.containsKey(customerName)) {
-        customerInventories[customerName] = [];
+      if (!customerProjects.containsKey(customerName)) {
+        customerProjects[customerName] = [];
       }
-      customerInventories[customerName]!.add(model);
+      customerProjects[customerName]!.add(model);
     }
 
     return Scaffold(
@@ -174,7 +176,6 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
         title: const Text('All Projects'),
         backgroundColor: Colors.grey[900],
         actions: [
-          // Add New Project button in AppBar
           IconButton(
             icon: const Icon(Icons.add, color: Colors.orange),
             onPressed: () {
@@ -188,24 +189,28 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: customerInventories.length,
+        itemCount: customerProjects.length,
         itemBuilder: (context, index) {
-          final customerName = customerInventories.keys.elementAt(index);
-          final inventories = customerInventories[customerName]!;
+          final customerName = customerProjects.keys.elementAt(index);
+          final projects = customerProjects[customerName]!;
 
           return Card(
             elevation: 4,
             color: Colors.grey[850],
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: ExpansionTile(
+              leading: Icon(Icons.person, color: Colors.orange),
               title: Text(customerName,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                       color: Colors.orange
                   )),
-              children: inventories.map((inventory) =>
-                  _buildInventoryItem(context, inventory)).toList(),
+              trailing: IconButton(
+                icon: const Icon(Icons.picture_as_pdf, color: Colors.green),
+                onPressed: () => _generateCustomerPdf(customerName, projects),
+              ),
+              children: projects.map((project) => _buildProjectItem(context, project)).toList(),
             ),
           );
         },
@@ -213,7 +218,71 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
     );
   }
 
-  Widget _buildInventoryItem(BuildContext context, CustomerModel model) {
+  // Widget _buildProjectItem(BuildContext context, CustomerModel model) {
+  //   return Padding(
+  //     padding: const EdgeInsets.all(12),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //           children: [
+  //             Text(model.date, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+  //             Row(
+  //               children: [
+  //                 IconButton(
+  //                   icon: const Icon(Icons.edit, color: Colors.blue),
+  //                   onPressed: () => _navigateToEditScreen(context, model),
+  //                 ),
+  //                 IconButton(
+  //                   icon: const Icon(Icons.picture_as_pdf, color: Colors.green),
+  //                   onPressed: () => _generateAndSharePdf(model),
+  //                 ),
+  //                 IconButton(
+  //                   icon: const Icon(Icons.delete, color: Colors.red),
+  //                   onPressed: () => _confirmDelete(model),
+  //                 ),
+  //               ],
+  //             ),
+  //           ],
+  //         ),
+  //         Text('Room: ${model.room}', style: const TextStyle(color: Colors.white)),
+  //         Text('Material: ${model.fileType}', style: const TextStyle(color: Colors.white70)),
+  //         const SizedBox(height: 10),
+  //         const Text('Dimensions:', style: TextStyle(
+  //             fontWeight: FontWeight.bold,
+  //             color: Colors.orange
+  //         )),
+  //         for (var dim in model.dimensions)
+  //           Padding(
+  //             padding: const EdgeInsets.only(left: 8.0, bottom: 4),
+  //             child: Row(
+  //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //               children: [
+  //                 Text('${dim['wall']}:', style: const TextStyle(color: Colors.white70)),
+  //                 Text(' ${dim['width']}', style: const TextStyle(color: Colors.white70)),
+  //                 Text(' ${dim['height']}', style: const TextStyle(color: Colors.white70)),
+  //                 Text(' ${dim['quantity']}'),
+  //                 Text('${dim['sqFt']} sq.ft', style: const TextStyle(color: Colors.white)),
+  //               ],
+  //             ),
+  //           ),
+  //         const Divider(color: Colors.grey),
+  //         _buildInfoRow('Total Amount:', 'Rs${model.totalAmount}', isTotal: true),
+  //         const SizedBox(height: 10),
+  //         ElevatedButton(
+  //           onPressed: () => _navigateToDetailScreen(context, model),
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: Colors.grey[800],
+  //             minimumSize: const Size(double.infinity, 40),
+  //           ),
+  //           child: const Text('View Details', style: TextStyle(color: Colors.orange)),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+  Widget _buildProjectItem(BuildContext context, CustomerModel model) {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -222,20 +291,17 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Date: ${model.date}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              Text(model.date, style: const TextStyle(fontSize: 14, color: Colors.white70)),
               Row(
                 children: [
-                  // EDIT BUTTON
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.blue),
                     onPressed: () => _navigateToEditScreen(context, model),
                   ),
-                  // PDF BUTTON
                   IconButton(
                     icon: const Icon(Icons.picture_as_pdf, color: Colors.green),
                     onPressed: () => _generateAndSharePdf(model),
                   ),
-                  // DELETE BUTTON
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: () => _confirmDelete(model),
@@ -251,39 +317,42 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
               fontWeight: FontWeight.bold,
               color: Colors.orange
           )),
-          for (var dim in model.dimensions)
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('${dim['wall']}: ${dim['width']} x ${dim['height']} ft',
-                      style: const TextStyle(color: Colors.white70)),
-                  Text('${dim['sqFt']} sq.ft', style: const TextStyle(color: Colors.white)),
-                ],
+
+          // Horizontally scrollable dimensions section
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 20,
+              headingRowHeight: 40,
+              dataRowHeight: 40,
+              headingTextStyle: const TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14
               ),
+              dataTextStyle: const TextStyle(color: Colors.white70, fontSize: 14),
+              columns: const [
+                DataColumn(label: Text('Wall')),
+                DataColumn(label: Text('Width')),
+                DataColumn(label: Text('Height')),
+                DataColumn(label: Text('Qty')),
+                DataColumn(label: Text('Sq.ft')),
+              ],
+              rows: model.dimensions.map((dim) {
+                return DataRow(cells: [
+                  DataCell(Text(dim['wall']?.toString() ?? '')),
+                  DataCell(Text(dim['width']?.toString() ?? '')),
+                  DataCell(Text(dim['height']?.toString() ?? '')),
+                  DataCell(Text(dim['quantity']?.toString() ?? '')),
+                  DataCell(Text(dim['sqFt']?.toString() ?? '')),
+                ]);
+              }).toList(),
             ),
+          ),
+
           const Divider(color: Colors.grey),
           _buildInfoRow('Total Amount:', 'Rs${model.totalAmount}', isTotal: true),
           const SizedBox(height: 10),
-          // ADD NEW ITEM BUTTON
-          ElevatedButton(
-            onPressed: () => _navigateToAddItemScreen(context, model),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey[800],
-              minimumSize: const Size(double.infinity, 40),
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.add, color: Colors.orange, size: 20),
-                SizedBox(width: 8),
-                Text('Add New Item', style: TextStyle(color: Colors.orange)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // VIEW DETAILS BUTTON
           ElevatedButton(
             onPressed: () => _navigateToDetailScreen(context, model),
             style: ElevatedButton.styleFrom(
@@ -293,22 +362,6 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
             child: const Text('View Details', style: TextStyle(color: Colors.orange)),
           ),
         ],
-      ),
-    );
-  }
-
-  // Navigate to add new item screen
-  void _navigateToAddItemScreen(BuildContext context, CustomerModel model) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InventoryApp(
-          customerId: model.customerKey!,
-          customerName: model.customerName,
-          phone: model.phone,
-          address: model.address,
-          date: model.date,
-        ),
       ),
     );
   }
@@ -359,6 +412,8 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
     );
   }
 
+  // ShowInventoryListScreen.dart
+// Inside the _navigateToDetailScreen method
   void _navigateToDetailScreen(BuildContext context, CustomerModel model) {
     Navigator.push(
       context,
@@ -376,10 +431,43 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
           totalSqFt: model.totalSqFt.toString(),
           totalAmount: model.totalAmount.toString(),
           remainingBalance: model.remainingBalance.toString(),
-          dimensions: model.dimensions.map((e) =>
-          Map<String, String>.from(e)).toList(),
+          dimensions: model.dimensions.map((d) => {
+            'wall': d['wall']?.toString() ?? 'N/A',
+            'width': d['width']?.toString() ?? '0',
+            'height': d['height']?.toString() ?? '0',
+            'quantity': d['quantity']?.toString() ?? '1',
+            'sqFt': d['sqFt']?.toString() ?? '0',
+          }).toList(),
         ),
       ),
     );
+  }
+
+
+
+  Future<void> _generateCustomerPdf(String customerName, List<CustomerModel> projects) async {
+    try {
+      if (projects.isEmpty) return;
+
+      final firstProject = projects.first;
+      final pdfFile = await PdfService.generateCustomerPdf(
+        customerName: customerName,
+        phone: firstProject.phone,
+        address: firstProject.address,
+        projects: projects,
+      );
+
+      await PdfService.sharePdf(pdfFile);
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to generate customer PDF: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    }
   }
 }

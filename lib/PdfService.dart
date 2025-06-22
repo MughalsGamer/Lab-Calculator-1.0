@@ -1,10 +1,174 @@
+// PdfService.dart
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:intl/intl.dart';
+
+import 'Model class.dart';
 
 class PdfService {
+  // Define brand colors
+  static final PdfColor _primaryColor = PdfColor.fromInt(0xFFFFA500); // Orange
+  static final PdfColor _secondaryColor = PdfColor.fromInt(0xFF4A6572); // Blue-Grey
+  static final PdfColor _accentColor = PdfColor.fromInt(0xFF0D47A1); // Dark Blue
+  static final PdfColor _lightBg = PdfColor.fromInt(0xFFF5F5F5); // Light Grey
+  static final PdfColor _darkText = PdfColor.fromInt(0xFF263238); // Dark Grey
+
+  // Reusable styles
+  static pw.TextStyle get _headerStyle => pw.TextStyle(
+    fontSize: 24,
+    fontWeight: pw.FontWeight.bold,
+    color: _primaryColor,
+  );
+
+  static pw.TextStyle get _titleStyle => pw.TextStyle(
+    fontSize: 18,
+    fontWeight: pw.FontWeight.bold,
+    color: _secondaryColor,
+  );
+
+  static pw.TextStyle get _sectionTitleStyle => pw.TextStyle(
+    fontSize: 16,
+    fontWeight: pw.FontWeight.bold,
+    color: _accentColor,
+  );
+
+  static pw.TextStyle get _detailLabelStyle => pw.TextStyle(
+    fontWeight: pw.FontWeight.bold,
+    color: _darkText,
+  );
+
+  static pw.TextStyle get _totalStyle => pw.TextStyle(
+    fontWeight: pw.FontWeight.bold,
+    color: _primaryColor,
+    fontSize: 16,
+  );
+
+  // Unified project content builder
+  static List<pw.Widget> _buildProjectContent(
+      String customerName,
+      String phone,
+      String address,
+      String date,
+      String room,
+      String fileType,
+      String rate,
+      String additionalCharges,
+      String advance,
+      String totalSqFt,
+      String totalAmount,
+      String remainingBalance,
+      List<Map<String, dynamic>> dimensions,
+      ) {
+    return [
+      // Project Details Header
+      pw.Container(
+          child: pw.Text('Details', style: _titleStyle),
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: _lightBg,
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
+      ),
+
+      ),
+      pw.SizedBox(height: 15),
+
+      // Customer Information
+      _buildPdfSection('Customer Information', [
+        _buildPdfDetailRow('Customer Name:', customerName),
+        _buildPdfDetailRow('Phone:', phone),
+        _buildPdfDetailRow('Address:', address),
+        _buildPdfDetailRow('Date:', date),
+      ]),
+
+      pw.SizedBox(height: 20),
+
+      // Project Details
+      _buildPdfSection('Specifications', [
+        _buildPdfDetailRow('Room:', room),
+        _buildPdfDetailRow('Material Type:', fileType),
+      ]),
+
+      pw.SizedBox(height: 20),
+
+      // Dimensions
+      _buildPdfSection('Dimensions', [
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+          children: [
+            // Header row
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: _secondaryColor),
+              children: [
+                _buildTableHeaderCell('Wall'),
+                _buildTableHeaderCell('Width'),
+                _buildTableHeaderCell('Height'),
+                _buildTableHeaderCell('Qty'),
+                _buildTableHeaderCell('Sq.Ft'),
+              ],
+            ),
+            // Data rows
+            for (var dim in dimensions)
+              pw.TableRow(
+                children: [
+                  _buildTableCell(dim['wall']?.toString() ?? 'N/A'),
+                  _buildTableCell(dim['width']?.toString() ?? '0'),
+                  _buildTableCell(dim['height']?.toString() ?? '0'),
+                  _buildTableCell(dim['quantity']?.toString() ?? '1'),
+                  _buildTableCell(dim['sqFt']?.toString() ?? '0'),
+                ],
+              ),
+          ],
+        ),
+      ]
+      ),
+
+      pw.SizedBox(height: 20),
+
+      // Financial Summary
+      _buildPdfSection('Financial Summary', [
+        _buildPdfAmountRow('Rate per Sq.ft:', 'Rs$rate'),
+        _buildPdfAmountRow('Total Area:', '$totalSqFt sq.ft'),
+        _buildPdfAmountRow('Additional Charges:', 'Rs$additionalCharges'),
+        _buildPdfAmountRow('Total Amount:', 'Rs$totalAmount'),
+        _buildPdfAmountRow('Advance:', 'Rs$advance'),
+        _buildPdfAmountRow('Remaining Balance:', 'Rs$remainingBalance',
+            isTotal: true),
+      ]),
+
+      pw.SizedBox(height: 30),
+      pw.Center(
+        child: pw.Text('Thank you for choosing Graphics Lab!',
+            style: pw.TextStyle(
+                fontStyle: pw.FontStyle.italic,
+                color: _primaryColor)),
+      )
+    ];
+  }
+
+  // Build table header cell
+  static pw.Widget _buildTableHeaderCell(String text) {
+    return pw.Container(
+        alignment: pw.Alignment.center,
+        padding: const pw.EdgeInsets.all(6),
+    child: pw.Text(text,
+    style: _detailLabelStyle.copyWith(color: PdfColors.white),
+
+    ));
+  }
+
+  // Build table data cell
+  static pw.Widget _buildTableCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(text, style: const pw.TextStyle(fontSize: 11)),
+    );
+  }
+
   static Future<File> generateInventoryPdf({
     required String customerName,
     required String phone,
@@ -20,123 +184,298 @@ class PdfService {
     required String remainingBalance,
     required List<Map<String, dynamic>> dimensions,
   }) async {
-    final pdf = pw.Document();
-
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: await PdfGoogleFonts.openSansRegular(),
+        bold: await PdfGoogleFonts.openSansBold(),
+      ),
+    );
+    final logoImage = pw.MemoryImage(
+      (await rootBundle.load('assets/images/logos.png')).buffer.asUint8List(),
+    );
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+        margin: const pw.EdgeInsets.all(30),
+        header: (context) => pw.Container(
+          alignment: pw.Alignment.center,
+          margin: const pw.EdgeInsets.only(bottom: 20),
+          child:pw.Column(
             children: [
-              pw.Header(
-                level: 0,
-                child: pw.Text('LOCK DESIGN PROJECT',
-                    style: pw.TextStyle(
-                        fontSize: 24,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.orange)),
-              ),
-              pw.SizedBox(height: 10),
-              pw.Text('Project Details', style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.blueGrey800)),
-              pw.Divider(thickness: 1),
-              pw.SizedBox(height: 15),
-
-              // Customer Information
-              _buildPdfSection('Customer Information', [
-                _buildPdfDetailRow('Customer Name:', customerName),
-                _buildPdfDetailRow('Phone:', phone),
-                _buildPdfDetailRow('Address:', address),
-                _buildPdfDetailRow('Date:', date),
-              ]),
-
-              pw.SizedBox(height: 20),
-
-              // Project Details
-              _buildPdfSection('Project Specifications', [
-                _buildPdfDetailRow('Room:', room),
-                _buildPdfDetailRow('Material Type:', fileType),
-              ]),
-
-              pw.SizedBox(height: 20),
-
-              // Dimensions
-              _buildPdfSection('Dimensions', [
-                pw.Table(
-                  border: pw.TableBorder.all(color: PdfColors.grey400),
-                  children: [
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(color: PdfColors.grey200),
+              pw.Column(
+                children: [
+                  pw.Row(
                       children: [
-                        pw.Padding(
-                            child: pw.Text('Wall',
-                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                            padding: pw.EdgeInsets.all(8)),
-                        pw.Padding(
-                            child: pw.Text('Width (ft)',
-                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                            padding: pw.EdgeInsets.all(8)),
-                        pw.Padding(
-                            child: pw.Text('Height (ft)',
-                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                            padding: pw.EdgeInsets.all(8)),
-                        pw.Padding(
-                            child: pw.Text('Sq.ft',
-                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                            padding: pw.EdgeInsets.all(8)),
-                      ],
-                    ),
-                    ...dimensions.map((dim) => pw.TableRow(
-                      children: [
-                        pw.Padding(
-                            child: pw.Text(dim['wall']?.toString() ?? 'Wall'),
-                            padding: pw.EdgeInsets.all(8)),
-                        pw.Padding(
-                            child: pw.Text(dim['width']?.toString() ?? '0'),
-                            padding: pw.EdgeInsets.all(8)),
-                        pw.Padding(
-                            child: pw.Text(dim['height']?.toString() ?? '0'),
-                            padding: pw.EdgeInsets.all(8)),
-                        pw.Padding(
-                            child: pw.Text(dim['sqFt']?.toString() ?? '0'),
-                            padding: pw.EdgeInsets.all(8)),
-                      ],
-                    )),
-                  ],
-                ),
-              ]),
+                        pw.Container(
+                          child: pw.Image(logoImage),
+                          width: 60,
+                          height: 60,
+                          decoration: pw.BoxDecoration(
+                            shape: pw.BoxShape.circle,
+                            border: pw.Border.all(color: _primaryColor, width: 2),
+                          ),
+                        ),
+                        pw.SizedBox(width: 15),
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text('Graphics Lab', style: _headerStyle),
+                            pw.Text('From Designing To Printing, Exactly According To Your Idea',
+                                style: pw.TextStyle(color: _secondaryColor)),
+                          ],
+                        ),
+                        pw.SizedBox(height: 5),
+                        pw.Divider(),
 
-              pw.SizedBox(height: 20),
+                      ]
+                  ),
 
-              // Financial Summary
-              _buildPdfSection('Financial Summary', [
-                _buildPdfAmountRow('Rate per Sq.ft:', 'Rs$rate'),
-                _buildPdfAmountRow('Total Area:', '$totalSqFt sq.ft'),
-                _buildPdfAmountRow('Additional Charges:', 'Rs$additionalCharges'),
-                _buildPdfAmountRow('Total Amount:', 'Rs$totalAmount'),
-                _buildPdfAmountRow('Advance:', 'Rs$advance'),
-                _buildPdfAmountRow('Remaining Balance:', 'Rs$remainingBalance',
-                    isTotal: true),
-              ]),
-
-              pw.SizedBox(height: 30),
-              pw.Center(
-                child: pw.Text('Thank you for choosing Lock Design Pro!',
-                    style: pw.TextStyle(
-                        fontStyle: pw.FontStyle.italic,
-                        color: PdfColors.orange)),
+                ],
               ),
+
             ],
-          );
-        },
+          ),
+
+
+
+
+        ),
+
+
+        footer: (context) => pw.Container(
+          alignment: pw.Alignment.center,
+          margin: const pw.EdgeInsets.only(top: 20),
+          child: pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: const pw.TextStyle(color: PdfColors.grey),
+          ),
+        ),
+        build: (context) => _buildProjectContent(
+          customerName,
+          phone,
+          address,
+          date,
+          room,
+          fileType,
+          rate,
+          additionalCharges,
+          advance,
+          totalSqFt,
+          totalAmount,
+          remainingBalance,
+          dimensions,
+        ),
       ),
     );
 
     final output = await getTemporaryDirectory();
-    final file = File('${output.path}/project_${customerName}_$date.pdf');
+    final file = File('${output.path}/${customerName}_$date.pdf');
+    await file.writeAsBytes(await pdf.save());
+
+    return file;
+  }
+
+  static Future<File> generateCustomerPdf({
+    required String customerName,
+    required String phone,
+    required String address,
+    required List<CustomerModel> projects,
+  }) async {
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: await PdfGoogleFonts.openSansRegular(),
+        bold: await PdfGoogleFonts.openSansBold(),
+      ),
+    );
+
+    // Add summary page
+    final logoImage = pw.MemoryImage(
+      (await rootBundle.load('assets/images/logos.png')).buffer.asUint8List(),
+    );
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(30),
+        build: (context) {
+          final currencyFormat = NumberFormat.currency(symbol: 'Rs', decimalDigits: 2);
+          final totalProjects = projects.length;
+
+          return [ pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header with logo
+              pw.Row(
+                children: [
+                  pw.Container(
+                    child: pw.Image(logoImage),
+                    width: 60,
+                    height: 60,
+                    decoration: pw.BoxDecoration(
+                      shape: pw.BoxShape.circle,
+                      border: pw.Border.all(color: _primaryColor, width: 2),
+                    ),
+                  ),
+                  pw.SizedBox(width: 15),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Graphics Lab', style: _headerStyle),
+                      pw.Text('From Designing To Printing, Exactly According To Your Idea',
+                          style: pw.TextStyle(color: _secondaryColor)),
+                    ],
+                  )
+                ],
+              ),
+              pw.SizedBox(height: 20),
+
+              // Customer Information
+              pw.Container(
+                padding: const pw.EdgeInsets.all(15),
+                decoration: pw.BoxDecoration(
+                  color: _lightBg,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('CUSTOMER DETAILS',
+                        style: _titleStyle.copyWith(color: _accentColor)),
+                    pw.Divider(color: _primaryColor, height: 1.5),
+                    pw.SizedBox(height: 10),
+                    _buildPdfDetailRow('Name:', customerName),
+                    _buildPdfDetailRow('Phone:', phone),
+                    _buildPdfDetailRow('Address:', address),
+                    _buildPdfDetailRow('Date:', DateFormat('dd MMM yyyy').format(DateTime.now())),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+
+              // Inventory Summary
+              pw.Container(
+                padding: const pw.EdgeInsets.all(15),
+                decoration: pw.BoxDecoration(
+                  color: _lightBg,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('TOTAL INVENTORY SUMMARY',
+                        style: _titleStyle.copyWith(color: _accentColor)),
+                    pw.Divider(color: _primaryColor, height: 1.5),
+                    pw.SizedBox(height: 10),
+                    _buildPdfAmountRow('Total Projects:', totalProjects.toString()),
+                    _buildPdfAmountRow('Total Amount:', currencyFormat.format(projects.fold(0.0, (sum, item) => sum + (item.totalAmount)))),
+                    _buildPdfAmountRow('Total Advance:', currencyFormat.format(projects.fold(0.0, (sum, item) => sum + (item.advance)))),
+                    _buildPdfAmountRow('Total Remaining Balance:', currencyFormat.format(projects.fold(0.0, (sum, item) => sum + (item.remainingBalance))), isTotal: true),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+
+              // Projects list
+              ...projects.map((project) => pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 10),
+                padding: const pw.EdgeInsets.all(15),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(project.date, style: _detailLabelStyle),
+                        pw.Text('Room: ${project.room}'),
+                      ],
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('Material:', style: _detailLabelStyle),
+                        pw.Text(project.fileType),
+                      ],
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('Amount:', style: _detailLabelStyle),
+                        pw.Text('Rs${project.totalAmount.toStringAsFixed(2)}'),
+                      ],
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text('Balance:', style: _detailLabelStyle),
+                        pw.Text('Rs${project.remainingBalance.toStringAsFixed(2)}',
+                            style: pw.TextStyle(color: _primaryColor)),
+                      ],
+                    ),
+                  ],
+                ),
+              )).toList(),
+              pw.SizedBox(height: 30),
+
+              // Thank You Note
+              pw.Center(
+                child: pw.Text('Thank you for choosing Graphics Lab!',
+                    style: pw.TextStyle(
+                        fontStyle: pw.FontStyle.italic,
+                        color: _primaryColor,
+                        fontSize: 16)),
+              )
+            ],
+          )];
+        },
+      ),
+    );
+
+    // Add detail pages for each project using the same design
+    for (var project in projects) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(30),
+          header: (context) => pw.Container(
+            alignment: pw.Alignment.center,
+            margin: const pw.EdgeInsets.only(bottom: 20),
+            child: pw.Text('Graphics Lab', style: _headerStyle), // Same header as project PDF
+          ),
+          footer: (context) => pw.Container(
+            alignment: pw.Alignment.center,
+            margin: const pw.EdgeInsets.only(top: 20),
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: const pw.TextStyle(color: PdfColors.grey),
+            ),
+          ),
+          build: (context) => _buildProjectContent(
+            customerName,
+            phone,
+            address,
+            project.date,
+            project.room,
+            project.fileType,
+            project.rate.toString(),
+            project.additionalCharges.toString(),
+            project.advance.toString(),
+            project.totalSqFt.toString(),
+            project.totalAmount.toStringAsFixed(2),
+            project.remainingBalance.toStringAsFixed(2),
+            project.dimensions,
+          ),
+        ),
+      );
+    }
+
+    final output = await getTemporaryDirectory();
+    final file = File('${output.path}/customer_${customerName}_projects.pdf');
     await file.writeAsBytes(await pdf.save());
 
     return file;
@@ -146,13 +485,7 @@ class PdfService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(title,
-          style: pw.TextStyle(
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 16,
-              color: PdfColors.blueGrey800
-          ),
-        ),
+        pw.Text(title, style: _sectionTitleStyle),
         pw.SizedBox(height: 8),
         ...children,
       ],
@@ -165,9 +498,11 @@ class PdfService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(label, style:  pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(label, style: _detailLabelStyle),
           pw.SizedBox(width: 10),
-          pw.Text(value),
+          pw.Expanded(
+            child: pw.Text(value),
+          ),
         ],
       ),
     );
@@ -175,16 +510,12 @@ class PdfService {
 
   static pw.Widget _buildPdfAmountRow(String label, String value, {bool isTotal = false}) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      padding: const pw.EdgeInsets.symmetric(vertical: 6),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label, style: pw.TextStyle(
-            fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
-          )),
-          pw.Text(value, style: pw.TextStyle(
-            fontWeight: isTotal ? pw.FontWeight.bold : pw.FontWeight.normal,
-          )),
+          pw.Text(label, style: isTotal ? _totalStyle : _detailLabelStyle),
+          pw.Text(value, style: isTotal ? _totalStyle : null),
         ],
       ),
     );

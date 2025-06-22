@@ -1,7 +1,7 @@
+// inventory app.dart
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
 import 'Model class.dart';
 import 'ShowInventoryListScreen.dart';
 
@@ -33,11 +33,11 @@ class InventoryApp extends StatefulWidget {
 
 class _InventoryAppState extends State<InventoryApp> {
   final List<String> rooms = [
-    'Room 1', 'Room 2', 'Room 3', 'Room 4', 'Room 5',
+    'Printing Only','Room 1', 'Room 2', 'Room 3', 'Room 4', 'Room 5',
     'Hall', 'Kitchen', 'Office', 'Shop', 'Wall', 'Roof',
   ];
 
-  final List<String> walls = ['Front', 'Back', 'Right', 'Left', 'Roof'];
+  final List<String> walls = ['Front', 'Back', 'Right', 'Left', 'Roof', 'Flex Only'];
 
   final TextEditingController fileTypeController = TextEditingController();
   final TextEditingController rateController = TextEditingController();
@@ -45,7 +45,7 @@ class _InventoryAppState extends State<InventoryApp> {
   final TextEditingController advanceController = TextEditingController();
   final List<TextEditingController> widthControllers = [TextEditingController()];
   final List<TextEditingController> heightControllers = [TextEditingController()];
-
+  final List<TextEditingController> quantityControllers = [TextEditingController()];
 
   String? selectedRoom;
   final List<String?> selectedWalls = [null];
@@ -55,13 +55,11 @@ class _InventoryAppState extends State<InventoryApp> {
   double advanceAmount = 0.0;
   double remainingBalance = 0.0;
 
-
   @override
   void initState() {
     super.initState();
     _calculateTotal();
 
-    // If in edit mode, load initial data
     if (widget.isEditMode && widget.initialData != null) {
       _loadInitialData(widget.initialData!);
     }
@@ -75,18 +73,17 @@ class _InventoryAppState extends State<InventoryApp> {
       advanceController.text = model.advance.toString();
       selectedRoom = model.room;
 
-      // Clear existing dimension controllers
-      for (var controller in widthControllers) { controller.dispose(); }
-      for (var controller in heightControllers) { controller.dispose(); }
-      selectedWalls.clear();
-
+      // Clear existing controllers
       widthControllers.clear();
       heightControllers.clear();
+      quantityControllers.clear();
+      selectedWalls.clear();
 
       // Load dimensions
       for (var dim in model.dimensions) {
         widthControllers.add(TextEditingController(text: dim['width'].toString()));
         heightControllers.add(TextEditingController(text: dim['height'].toString()));
+        quantityControllers.add(TextEditingController(text: dim['quantity'].toString()));
         selectedWalls.add(dim['wall']);
       }
 
@@ -102,6 +99,7 @@ class _InventoryAppState extends State<InventoryApp> {
     advanceController.dispose();
     for (var controller in widthControllers) { controller.dispose(); }
     for (var controller in heightControllers) { controller.dispose(); }
+    for (var controller in quantityControllers) { controller.dispose(); }
     super.dispose();
   }
 
@@ -205,7 +203,7 @@ class _InventoryAppState extends State<InventoryApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Project Details",
+            const Text("Details",
               style: TextStyle(
                   color: Colors.orange,
                   fontWeight: FontWeight.bold,
@@ -256,6 +254,75 @@ class _InventoryAppState extends State<InventoryApp> {
     );
   }
 
+  // Widget _buildDimensionsCard() {
+  //   return Card(
+  //     elevation: 4,
+  //     color: Colors.grey[850],
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.circular(16),
+  //     ),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(16),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Row(
+  //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //             children: [
+  //               const Text("Dimensions",
+  //                 style: TextStyle(
+  //                     color: Colors.orange,
+  //                     fontWeight: FontWeight.bold,
+  //                     fontSize: 16
+  //                 ),
+  //               ),
+  //               IconButton(
+  //                 icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
+  //                 onPressed: _addDimensionField,
+  //               ),
+  //             ],
+  //           ),
+  //           const SizedBox(height: 12),
+  //           // Dimension headers
+  //           (widthControllers.length == 1)
+  //               ? Padding(
+  //             padding: const EdgeInsets.symmetric(vertical: 8),
+  //             child: Row(
+  //               children: [
+  //                 const SizedBox(width: 10),
+  //                 Expanded(flex: 2, child: _buildDimensionHeader("Width")),
+  //                 Expanded(flex: 2, child: _buildDimensionHeader("Height")),
+  //                 Expanded(flex: 2, child: _buildDimensionHeader("Qty")),
+  //                 Expanded( child: _buildDimensionHeader("Wall")),
+  //                 const SizedBox(width: 12),
+  //               ],
+  //             ),
+  //           )
+  //               : Padding(
+  //             padding: const EdgeInsets.symmetric(vertical: 8),
+  //             child: Row(
+  //               children: [
+  //                 Expanded(flex: 2, child: _buildDimensionHeader("Width")),
+  //                 const SizedBox(width: 20),
+  //                 Expanded(flex: 2, child: _buildDimensionHeader("Height")),
+  //                 const SizedBox(width: 10),
+  //                 Expanded(flex: 2, child: _buildDimensionHeader("Qty")),
+  //                 const SizedBox(width: 8),
+  //                 Expanded(flex: 3, child: _buildDimensionHeader("Wall")),
+  //                 const SizedBox(width: 12),
+  //               ],
+  //             ),
+  //           ),
+  //           ...List.generate(widthControllers.length, (index) => _buildDimensionRow(index)),
+  //
+  //         ],
+  //       ),
+  //
+  //     ),
+  //
+  //   );
+  // }
+
   Widget _buildDimensionsCard() {
     return Card(
       elevation: 4,
@@ -285,20 +352,57 @@ class _InventoryAppState extends State<InventoryApp> {
               ],
             ),
             const SizedBox(height: 12),
-            ...List.generate(widthControllers.length, (index) =>
-                _buildDimensionRow(index)),
+
+            // Horizontal scrollable container for the table
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 48),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Table header
+                    Row(
+                      children: [
+                        SizedBox(width: 40), // Space for remove button
+                        _buildHeaderCell("Width", 100),
+                        SizedBox(width: 30,),
+                        _buildHeaderCell("Height", 100),
+                        _buildHeaderCell("Qty", 60),
+                        _buildHeaderCell("Wall", 100),
+                        _buildHeaderCell("Sq.ft", 80),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Dimension rows
+                    ...List.generate(widthControllers.length, (index) =>
+                        _buildDimensionRow(index)
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _addDimensionField() {
-    setState(() {
-      widthControllers.add(TextEditingController());
-      heightControllers.add(TextEditingController());
-      selectedWalls.add(null);
-    });
+  Widget _buildHeaderCell(String text, double width) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+            color: Colors.orange,
+            fontWeight: FontWeight.bold,
+            fontSize: 14
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
   }
 
   Widget _buildDimensionRow(int index) {
@@ -306,77 +410,204 @@ class _InventoryAppState extends State<InventoryApp> {
       children: [
         Row(
           children: [
-            Expanded(
-              flex: 2,
-              child: _buildDimensionInput(widthControllers[index], 'Width (ft)'),
+            // Remove button
+            Container(
+              width: 40,
+              alignment: Alignment.center,
+              child: widthControllers.length > 1
+                  ? IconButton(
+                icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 24),
+                onPressed: () => _removeDimensionField(index),
+              )
+                  : const SizedBox(),
             ),
-            const SizedBox(width: 10),
-            const Text('×', style: TextStyle(color: Colors.white, fontSize: 20)),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: _buildDimensionInput(heightControllers[index], 'Height (ft)'),
+
+            // Width input
+            _buildDimensionCell(
+              controller: widthControllers[index],
+              hint: 'W',
+              width: 100,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 3,
+
+            // × symbol
+            const SizedBox(
+              width: 30,
+              child: Center(
+                child: Text('×', style: TextStyle(color: Colors.white, fontSize: 20)),
+              ),
+            ),
+
+            // Height input
+            _buildDimensionCell(
+              controller: heightControllers[index],
+              hint: 'H',
+              width: 100,
+            ),
+
+            // Qty input
+            _buildDimensionCell(
+              controller: quantityControllers[index],
+              hint: 'Qty',
+              width: 60,
+            ),
+
+            // Wall selector
+            Container(
+              width: 100,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: _buildWallSelector(index),
             ),
-            if (widthControllers.length > 1)
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                onPressed: () => _removeDimensionField(index),
-              ),
-          ],
-        ),
-        if (widthControllers[index].text.isNotEmpty &&
-            heightControllers[index].text.isNotEmpty &&
-            selectedWalls[index] != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
+
+            // Calculated sq.ft
+            Container(
+              width: 80,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                '${selectedWalls[index]}: ${_calculateSqFt(index).toStringAsFixed(2)} sq.ft',
-                style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                _calculateSqFt(index).toStringAsFixed(2),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                textAlign: TextAlign.center,
               ),
             ),
-          ),
+          ],
+        ),
         const Divider(color: Colors.grey),
       ],
     );
   }
+
+  Widget _buildDimensionCell({
+    required TextEditingController controller,
+    required String hint,
+    required double width,
+  }) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        onChanged: (value) => _calculateTotal(),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+          filled: true,
+          fillColor: Colors.grey[800],
+          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+  // Widget _buildDimensionHeader(String text) {
+  //   return Text(text,
+  //     style: TextStyle(
+  //         color: Colors.orange,
+  //         fontWeight: FontWeight.bold,
+  //         fontSize: 14
+  //     ),
+  //   );
+  // }
+
+  void _addDimensionField() {
+    setState(() {
+      widthControllers.add(TextEditingController());
+      heightControllers.add(TextEditingController());
+      quantityControllers.add(TextEditingController()..text = '1');
+      selectedWalls.add(null);
+    });
+  }
+
+  // Widget _buildDimensionRow(int index) {
+  //   return Column(
+  //     children: [
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             flex: 2,
+  //             child: _buildDimensionInput(widthControllers[index], 'Width (ft)'),
+  //           ),
+  //           const SizedBox(width: 10),
+  //           const Text('×', style: TextStyle(color: Colors.white, fontSize: 20)),
+  //           const SizedBox(width: 10),
+  //           Expanded(
+  //             flex: 2,
+  //             child: _buildDimensionInput(heightControllers[index], 'Height (ft)'),
+  //           ),
+  //           const SizedBox(width: 10),
+  //           Expanded(
+  //             flex: 2,
+  //             child: _buildDimensionInput(quantityControllers[index], 'Qty'),
+  //           ),
+  //           const SizedBox(width: 10),
+  //           Expanded(
+  //             flex: 3,
+  //             child: _buildWallSelector(index),
+  //           ),
+  //           if (widthControllers.length > 1)
+  //             IconButton(
+  //               icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+  //               onPressed: () => _removeDimensionField(index),
+  //             ),
+  //         ],
+  //       ),
+  //       if (widthControllers[index].text.isNotEmpty &&
+  //           heightControllers[index].text.isNotEmpty &&
+  //           quantityControllers[index].text.isNotEmpty &&
+  //           selectedWalls[index] != null)
+  //         Padding(
+  //           padding: const EdgeInsets.only(top: 4, left: 8),
+  //           child: Align(
+  //             alignment: Alignment.centerLeft,
+  //             child: Text(
+  //               '${selectedWalls[index]}: ${_calculateSqFt(index).toStringAsFixed(2)} sq.ft',
+  //               style: TextStyle(color: Colors.grey[400], fontSize: 12),
+  //             ),
+  //           ),
+  //         ),
+  //       const Divider(color: Colors.grey),
+  //     ],
+  //   );
+  // }
 
   void _removeDimensionField(int index) {
     if (widthControllers.length > 1) {
       setState(() {
         widthControllers.removeAt(index).dispose();
         heightControllers.removeAt(index).dispose();
+        quantityControllers.removeAt(index).dispose();
         selectedWalls.removeAt(index);
       });
       _calculateTotal();
     }
   }
 
-  Widget _buildDimensionInput(TextEditingController controller, String hint) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.white),
-      keyboardType: TextInputType.number,
-      onChanged: (value) => _calculateTotal(),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey[400]),
-        filled: true,
-        fillColor: Colors.grey[800],
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
+  // Widget _buildDimensionInput(TextEditingController controller, String hint) {
+  //   return TextField(
+  //     controller: controller,
+  //     style: const TextStyle(color: Colors.white),
+  //     keyboardType: TextInputType.number,
+  //     onChanged: (value) => _calculateTotal(),
+  //     decoration: InputDecoration(
+  //       hintText: hint,
+  //       hintStyle: TextStyle(color: Colors.grey[400]),
+  //       filled: true,
+  //       fillColor: Colors.grey[800],
+  //       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  //       border: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(12),
+  //         borderSide: BorderSide.none,
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildWallSelector(int index) {
     return Container(
@@ -482,19 +713,19 @@ class _InventoryAppState extends State<InventoryApp> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-          children: [
+        children: [
           _buildSummaryRow('Total Area:', '${totalSqFt.toStringAsFixed(2)} sq.ft'),
-      const Divider(color: Colors.grey),
-      _buildSummaryRow('Material Cost:', "Rs ${(totalSqFt * (double.tryParse(rateController.text) ?? 0)).toStringAsFixed(2)}"),
-        const Divider(color: Colors.grey),
-        _buildSummaryRow('Additional Charges:', 'Rs ${additionalChargesController.text.isNotEmpty ? additionalChargesController.text : "0.00"}'),
-        const Divider(color: Colors.grey),
-        _buildSummaryRow('Total Amount:', 'Rs ${totalAmount.toStringAsFixed(2)}', isHighlighted: true),
-        const Divider(color: Colors.grey),
-        _buildSummaryRow('Advance Paid:', 'Rs ${advanceAmount.toStringAsFixed(2)}'),
-        const Divider(color: Colors.grey),
-        _buildSummaryRow('Balance Due:', 'Rs ${remainingBalance.toStringAsFixed(2)}',
-            isHighlighted: true, isTotal: true),
+          const Divider(color: Colors.grey),
+          _buildSummaryRow('Material Cost:', "Rs ${(totalSqFt * (double.tryParse(rateController.text) ?? 0)).toStringAsFixed(2)}"),
+          const Divider(color: Colors.grey),
+          _buildSummaryRow('Additional Charges:', 'Rs ${additionalChargesController.text.isNotEmpty ? additionalChargesController.text : "0.00"}'),
+          const Divider(color: Colors.grey),
+          _buildSummaryRow('Total Amount:', 'Rs ${totalAmount.toStringAsFixed(2)}', isHighlighted: true),
+          const Divider(color: Colors.grey),
+          _buildSummaryRow('Advance Paid:', 'Rs ${advanceAmount.toStringAsFixed(2)}'),
+          const Divider(color: Colors.grey),
+          _buildSummaryRow('Balance Due:', 'Rs ${remainingBalance.toStringAsFixed(2)}',
+              isHighlighted: true, isTotal: true),
         ],
       ),
     );
@@ -547,7 +778,8 @@ class _InventoryAppState extends State<InventoryApp> {
     try {
       final width = double.tryParse(widthControllers[index].text) ?? 0;
       final height = double.tryParse(heightControllers[index].text) ?? 0;
-      return width * height;
+      final quantity = double.tryParse(quantityControllers[index].text) ?? 1;
+      return width * height * quantity;
     } catch (e) {
       return 0.0;
     }
@@ -583,18 +815,24 @@ class _InventoryAppState extends State<InventoryApp> {
     setState(() => _isLoading = true);
 
     try {
-      final inventoryRef = FirebaseDatabase.instance
-          .ref("customers/${widget.customerId}/inventory")
-          .push();
+      final databaseRef = FirebaseDatabase.instance.ref("customers/${widget.customerId}/inventory");
+      DatabaseReference inventoryRef;
+      if (widget.isEditMode && widget.inventoryId != null) {
+        inventoryRef = databaseRef.child(widget.inventoryId!);
+      } else {
+        inventoryRef = databaseRef.push();
+      }
 
       final dimensions = <Map<String, dynamic>>[];
       for (int i = 0; i < widthControllers.length; i++) {
         if (widthControllers[i].text.isNotEmpty &&
             heightControllers[i].text.isNotEmpty &&
+            quantityControllers[i].text.isNotEmpty &&
             selectedWalls[i] != null) {
           dimensions.add({
             'width': widthControllers[i].text,
             'height': heightControllers[i].text,
+            'quantity': quantityControllers[i].text,
             'wall': selectedWalls[i],
             'sqFt': _calculateSqFt(i).toStringAsFixed(2),
           });
@@ -642,6 +880,7 @@ class _InventoryAppState extends State<InventoryApp> {
       advanceController.clear();
       for (var controller in widthControllers) { controller.clear(); }
       for (var controller in heightControllers) { controller.clear(); }
+      for (var controller in quantityControllers) { controller.clear(); }
       for (int i = 0; i < selectedWalls.length; i++) { selectedWalls[i] = null; }
       selectedRoom = null;
       totalSqFt = 0.0;
@@ -679,22 +918,23 @@ class _InventoryAppState extends State<InventoryApp> {
           context,
           MaterialPageRoute(
             builder: (context) => ShowInventoryListScreen(
-              inventoryList: inventoryList,
+              inventoryList: inventoryList.map((e) => CustomerModel.fromMap(e)).toList(),
             ),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No projects found")),
-        );
-      }
+            const SnackBar(content: Text("No projects found")),
+    );
+    }
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text("Error: ${e.toString()}")),
+    );
     }
   }
 }
+

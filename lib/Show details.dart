@@ -1,6 +1,5 @@
+// Show details.dart
 import 'package:flutter/material.dart';
-
-
 import 'PdfService.dart';
 
 class ShowDetailsScreen extends StatelessWidget {
@@ -16,7 +15,7 @@ class ShowDetailsScreen extends StatelessWidget {
   final String totalSqFt;
   final String totalAmount;
   final String remainingBalance;
-  final List<Map<String, String>> dimensions;
+  final List<Map<String, dynamic>> dimensions;
 
   const ShowDetailsScreen({
     super.key,
@@ -97,6 +96,7 @@ class ShowDetailsScreen extends StatelessWidget {
                           children: [
                             Text('${dim['wall']}: ${dim['width']} x ${dim['height']} ft',
                                 style: const TextStyle(color: Colors.white70)),
+                            Text('Qty: ${dim['quantity']}'),
                             Text('${dim['sqFt']} sq.ft', style: const TextStyle(color: Colors.white)),
                           ],
                         ),
@@ -124,6 +124,8 @@ class ShowDetailsScreen extends StatelessWidget {
       ),
     );
   }
+
+
 
   Widget _buildSectionCard({required String title, required List<Widget> children}) {
     return Card(
