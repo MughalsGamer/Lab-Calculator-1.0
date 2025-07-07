@@ -27,7 +27,7 @@ class _ShowInventoryListScreenState extends State<ShowInventoryListScreen> {
     alldata = widget.inventoryList;
     fetchData();
   }
-
+//dsfsdfsdf
   void fetchData() {
     _ref.onValue.listen((event) {
       final data = event.snapshot.value;
