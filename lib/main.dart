@@ -19,7 +19,7 @@ class LockDesignApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Lock Design Pro',
+      title: 'Lab Book',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: Colors.orange,

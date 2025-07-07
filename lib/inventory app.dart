@@ -37,7 +37,7 @@ class _InventoryAppState extends State<InventoryApp> {
     'Hall', 'Kitchen', 'Office', 'Shop', 'Wall', 'Roof',
   ];
 
-  final List<String> walls = ['Front', 'Back', 'Right', 'Left', 'Roof', 'Flex Only'];
+  final List<String> walls = ['Front', 'Back', 'Right', 'Left', 'Roof','Front+Back','Left+Right','Flex Only'];
 
   final TextEditingController fileTypeController = TextEditingController();
   final TextEditingController rateController = TextEditingController();
