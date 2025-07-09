@@ -15,7 +15,7 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
   final DatabaseReference _ref = FirebaseDatabase.instance.ref().child('parties');
   List<PartyModel> _customers = [];
   List<PartyModel> _suppliers = [];
-  List<PartyModel> _fitters = []; // Changed to plural for consistency
+  List<PartyModel> _fitters = [];
   bool _isLoading = true;
   String? _errorMessage;
   late TabController _tabController;
@@ -68,6 +68,49 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
         _errorMessage = "Error: ${e.toString()}";
       });
     }
+  }
+
+  Future<void> _deleteParty(String partyId) async {
+    try {
+      await _ref.child(partyId).remove();
+      // No need to call _fetchParties() here if using onValue listener,
+      // as it will automatically update the list.
+      // If not using onValue, you would call _fetchParties() here.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Party deleted successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete party: $e')),
+      );
+    }
+  }
+
+  void _confirmDeleteParty(PartyModel party) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[800],
+
+        title: const Text('Delete Party'),
+        content: Text('Are you sure you want to delete ${party.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              _deleteParty(party.id);
+              Navigator.pop(context);
+      }, child: Text('Delete'),
+      ),
+        ]
+
+      )
+    );
+
+
   }
 
   Widget _buildPartyList(List<PartyModel> parties) {
@@ -133,7 +176,20 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
               '${party.type.toUpperCase()} • ${party.phone}',
               style: const TextStyle(color: Colors.white70),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios, color: Colors.orange),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.redAccent),
+                  onPressed: () {
+                    // Implement delete functionality
+                    _confirmDeleteParty(party);
+                  },
+                ),
+
+              ],
+            ),
+
             onTap: () {
               Navigator.push(
                 context,
