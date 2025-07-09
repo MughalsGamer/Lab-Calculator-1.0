@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
-import 'Model class.dart';
 import 'ListOfPartiesScreen.dart';
 import 'inventory app.dart';
 
@@ -80,7 +79,7 @@ class _FirstPageState extends State<FirstPage> {
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.black.withOpacity(0.4),
+                        color: Colors.black.withOpacity(0.1),
                       ),
                     ),
                   ),
@@ -184,6 +183,7 @@ class _FirstPageState extends State<FirstPage> {
             items: const [
               DropdownMenuItem(value: 'customer', child: Text('Customer')),
               DropdownMenuItem(value: 'supplier', child: Text('Supplier')),
+              DropdownMenuItem(value: 'fitter', child: Text('Fitter')),
             ],
             onChanged: (value) => setState(() => _selectedPartyType = value),
           ),

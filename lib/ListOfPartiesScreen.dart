@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-
-import 'Model class.dart';
 import 'Party Model.dart';
 import 'ShowInventoryListScreen.dart';
 
@@ -12,18 +10,20 @@ class ListOfPartiesScreen extends StatefulWidget {
   State<ListOfPartiesScreen> createState() => _ListOfPartiesScreenState();
 }
 
-class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> with SingleTickerProviderStateMixin {
+class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
+    with SingleTickerProviderStateMixin {
   final DatabaseReference _ref = FirebaseDatabase.instance.ref().child('parties');
-  List<PartyModel> _allParties = [];
   List<PartyModel> _customers = [];
   List<PartyModel> _suppliers = [];
+  List<PartyModel> _fitters = []; // Changed to plural for consistency
   bool _isLoading = true;
+  String? _errorMessage;
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _fetchParties();
   }
 
@@ -50,18 +50,40 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> with SingleTi
         }
 
         setState(() {
-          _allParties = fetchedParties;
           _customers = fetchedParties.where((party) => party.type == 'customer').toList();
           _suppliers = fetchedParties.where((party) => party.type == 'supplier').toList();
+          _fitters = fetchedParties.where((party) => party.type == 'fitter').toList();
           _isLoading = false;
+          _errorMessage = null;
+        });
+      }, onError: (error) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = "Failed to load parties: $error";
         });
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Error: ${e.toString()}";
+      });
     }
   }
 
   Widget _buildPartyList(List<PartyModel> parties) {
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            _errorMessage!,
+            style: TextStyle(color: Colors.red[400], fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     if (parties.isEmpty) {
       return Center(
         child: Column(
@@ -96,7 +118,7 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> with SingleTi
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: ListTile(
             leading: Icon(
-              party.type == 'customer' ? Icons.person : Icons.business,
+              _getPartyIcon(party.type), // Use helper function for icons
               color: Colors.orange,
             ),
             title: Text(
@@ -126,6 +148,20 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> with SingleTi
     );
   }
 
+  // Helper function to get appropriate icon for party type
+  IconData _getPartyIcon(String type) {
+    switch (type) {
+      case 'customer':
+        return Icons.person;
+      case 'supplier':
+        return Icons.business;
+      case 'fitter':
+        return Icons.build; // Specific icon for fitters
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -144,14 +180,9 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> with SingleTi
           labelColor: Colors.orange,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(
-              icon: Icon(Icons.person),
-              text: 'Customers',
-            ),
-            Tab(
-              icon: Icon(Icons.business),
-              text: 'Suppliers',
-            ),
+            Tab(icon: Icon(Icons.person), text: 'Customers'),
+            Tab(icon: Icon(Icons.business), text: 'Suppliers'),
+            Tab(icon: Icon(Icons.build), text: 'Fitters'), // Consistent naming
           ],
         ),
       ),
@@ -162,6 +193,7 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> with SingleTi
         children: [
           _buildPartyList(_customers),
           _buildPartyList(_suppliers),
+          _buildPartyList(_fitters), // Consistent naming
         ],
       ),
     );
