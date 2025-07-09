@@ -1,6 +1,8 @@
 // pdf_service.dart
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -45,6 +47,13 @@ class PdfService {
     color: _primaryColor,
     fontSize: 16,
   );
+
+  // Load image as pw.Image widget
+  static Future<pw.Image> _loadImage(String assetPath) async {
+    final ByteData data = await rootBundle.load(assetPath);
+    final Uint8List bytes = data.buffer.asUint8List();
+    return pw.Image(pw.MemoryImage(bytes));
+  }
 
   static List<pw.Widget> _buildProjectContent(
       String customerName,
@@ -162,10 +171,11 @@ class PdfService {
     required List<Map<String, dynamic>> dimensions,
   }) async {
     final pdf = pw.Document();
+    final logo = await _loadImage('assets/images/logos.png');
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
+                pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(30),
         header: (context) => pw.Container(
           alignment: pw.Alignment.center,
@@ -175,9 +185,20 @@ class PdfService {
               pw.Row(
                 children: [
                   pw.Container(
-                    child: pw.FlutterLogo(),
+                    child: logo,
                     width: 60,
                     height: 60,
+
+                    decoration: pw.BoxDecoration(
+                      shape: pw.BoxShape.circle,
+                      border: pw.Border.all(color: _primaryColor, width: 2),
+                      boxShadow: [
+                        pw.BoxShadow(
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        )
+                      ]
+                   )
                   ),
                   pw.SizedBox(width: 15),
                   pw.Column(
@@ -201,6 +222,7 @@ class PdfService {
             style: const pw.TextStyle(color: PdfColors.grey),
           ),
         ),
+
         build: (context) => _buildProjectContent(
           customerName,
           phone,
@@ -229,6 +251,7 @@ class PdfService {
     final pdf = pw.Document();
     final currencyFormat = NumberFormat.currency(symbol: 'Rs', decimalDigits: 2);
     final totalProjects = projects.length;
+    final logo = await _loadImage('assets/images/logos.png');
 
     pdf.addPage(
       pw.MultiPage(
@@ -242,9 +265,20 @@ class PdfService {
                 pw.Row(
                   children: [
                     pw.Container(
-                      child: pw.FlutterLogo(),
-                      width: 60,
-                      height: 60,
+                        child: logo,
+                        width: 60,
+                        height: 60,
+
+                        decoration: pw.BoxDecoration(
+                            shape: pw.BoxShape.circle,
+                            border: pw.Border.all(color: _primaryColor, width: 2),
+                            boxShadow: [
+                              pw.BoxShadow(
+                                blurRadius: 10,
+                                spreadRadius: 2,
+                              )
+                            ]
+                        )
                     ),
                     pw.SizedBox(width: 15),
                     pw.Column(
