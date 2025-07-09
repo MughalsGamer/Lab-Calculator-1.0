@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'PdfService.dart';
 
 class ShowDetailsScreen extends StatelessWidget {
@@ -175,7 +177,7 @@ class ShowDetailsScreen extends StatelessWidget {
 
   Future<void> _generateAndSharePdf(BuildContext context) async {
     try {
-      final pdfFile = await PdfService.generateInventoryPdf(
+      final pdfBytes = await PdfService.generateInventoryPdf(
         customerName: customerName,
         phone: phone,
         address: address,
@@ -191,7 +193,16 @@ class ShowDetailsScreen extends StatelessWidget {
         dimensions: dimensions,
       );
 
-      await PdfService.sharePdf(pdfFile);
+      final fileName = '${customerName}_${date.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}.pdf';
+
+      if (kIsWeb) {
+        await Printing.layoutPdf(
+          onLayout: (format) => pdfBytes,
+          name: fileName,
+        );
+      } else {
+        await PdfService.sharePdf(pdfBytes, fileName);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to generate PDF: ${e.toString()}")),

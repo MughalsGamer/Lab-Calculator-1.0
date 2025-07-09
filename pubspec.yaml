@@ -41,6 +41,7 @@ dependencies:
   firebase_database:
   fluttertoast:
   path_provider:
+  html:
 
 dev_dependencies:
   flutter_test:

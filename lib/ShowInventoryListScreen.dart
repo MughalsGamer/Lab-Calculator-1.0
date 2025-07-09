@@ -6,7 +6,6 @@ import 'Party Model.dart';
 import 'PdfService.dart';
 import 'Show details.dart';
 import 'inventory app.dart';
-import 'ListOfPartiesScreen.dart';
 
 class PartyProjectsScreen extends StatefulWidget {
   final PartyModel party;
@@ -85,7 +84,7 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
 
   Future<void> _generateAndSharePdf(CustomerModel model) async {
     try {
-      final pdfFile = await PdfService.generateInventoryPdf(
+      await PdfService.generateInventoryPdf(
         customerName: model.customerName,
         phone: model.phone,
         address: model.address,
@@ -100,8 +99,6 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
         remainingBalance: model.remainingBalance.toString(),
         dimensions: model.dimensions,
       );
-
-      await PdfService.sharePdf(pdfFile);
     } catch (e) {
       Fluttertoast.showToast(
         msg: "Failed to generate PDF: $e",
@@ -192,7 +189,7 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
               ),
-              child: const Text("Add First Project",style: TextStyle(color: Colors.white),),
+              child: const Text("Add First Project", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -220,10 +217,6 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () => _navigateToEditScreen(context, model),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.picture_as_pdf, color: Colors.green),
-                            onPressed: () => _generateAndSharePdf(model),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),

@@ -1,15 +1,14 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+// pdf_service.dart
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 
 import 'Model class.dart';
-import 'ListOfPartiesScreen.dart';
 import 'Party Model.dart';
+
 
 class PdfService {
   static final PdfColor _primaryColor = PdfColor.fromInt(0xFFFFA500);
@@ -70,21 +69,19 @@ class PdfService {
         color: _lightBg,
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
       ),
-       ),
+      ),
       pw.SizedBox(height: 15),
       _buildPdfSection('Party Information', [
         _buildPdfDetailRow('Name:', customerName),
         _buildPdfDetailRow('Phone:', phone),
         _buildPdfDetailRow('Address:', address),
         _buildPdfDetailRow('Date:', date),
-      ]
-      ),
+      ]),
       pw.SizedBox(height: 20),
       _buildPdfSection('Specifications', [
         _buildPdfDetailRow('Room:', room),
         _buildPdfDetailRow('Material Type:', fileType),
-      ]
-      ),
+      ]),
       pw.SizedBox(height: 20),
       _buildPdfSection('Dimensions', [
         pw.Table(
@@ -149,7 +146,7 @@ class PdfService {
     );
   }
 
-  static Future<File> generateInventoryPdf({
+  static Future<Uint8List> generateInventoryPdf({
     required String customerName,
     required String phone,
     required String address,
@@ -164,16 +161,7 @@ class PdfService {
     required String remainingBalance,
     required List<Map<String, dynamic>> dimensions,
   }) async {
-    final pdf = pw.Document(
-      theme: pw.ThemeData.withFont(
-        base: await pw.Font.ttf(await rootBundle.load("assets/fonts/OpenSans-Regular.ttf")),
-        bold: await pw.Font.ttf(await rootBundle.load("assets/fonts/OpenSans-Bold.ttf")),
-      ),
-    );
-
-    final logoImage = pw.MemoryImage(
-      (await rootBundle.load('assets/images/logo.png')).buffer.asUint8List(),
-    );
+    final pdf = pw.Document();
 
     pdf.addPage(
       pw.MultiPage(
@@ -187,13 +175,9 @@ class PdfService {
               pw.Row(
                 children: [
                   pw.Container(
-                    child: pw.Image(logoImage),
+                    child: pw.FlutterLogo(),
                     width: 60,
                     height: 60,
-                    decoration: pw.BoxDecoration(
-                      shape: pw.BoxShape.circle,
-                      border: pw.Border.all(color: _primaryColor, width: 2),
-                    ),
                   ),
                   pw.SizedBox(width: 15),
                   pw.Column(
@@ -235,36 +219,22 @@ class PdfService {
       ),
     );
 
-    final output = await getTemporaryDirectory();
-    final file = File('${output.path}/${customerName}_$date.pdf');
-    await file.writeAsBytes(await pdf.save());
-
-    return file;
+    return pdf.save();
   }
 
-  static Future<File> generatePartyPdf({
+  static Future<Uint8List> generatePartyPdf({
     required PartyModel party,
     required List<CustomerModel> projects,
   }) async {
-    final pdf = pw.Document(
-      theme: pw.ThemeData.withFont(
-        base: await pw.Font.ttf(await rootBundle.load("assets/fonts/OpenSans-Regular.ttf")),
-        bold: await pw.Font.ttf(await rootBundle.load("assets/fonts/OpenSans-Bold.ttf")),
-      ),
-    );
-
-    final logoImage = pw.MemoryImage(
-      (await rootBundle.load('assets/images/logo.png')).buffer.asUint8List(),
-    );
+    final pdf = pw.Document();
+    final currencyFormat = NumberFormat.currency(symbol: 'Rs', decimalDigits: 2);
+    final totalProjects = projects.length;
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(30),
         build: (context) {
-          final currencyFormat = NumberFormat.currency(symbol: 'Rs', decimalDigits: 2);
-          final totalProjects = projects.length;
-
           return [
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -272,13 +242,9 @@ class PdfService {
                 pw.Row(
                   children: [
                     pw.Container(
-                      child: pw.Image(logoImage),
+                      child: pw.FlutterLogo(),
                       width: 60,
                       height: 60,
-                      decoration: pw.BoxDecoration(
-                        shape: pw.BoxShape.circle,
-                        border: pw.Border.all(color: _primaryColor, width: 2),
-                      ),
                     ),
                     pw.SizedBox(width: 15),
                     pw.Column(
@@ -393,11 +359,7 @@ class PdfService {
       ),
     );
 
-    final output = await getTemporaryDirectory();
-    final file = File('${output.path}/${party.name}_projects.pdf');
-    await file.writeAsBytes(await pdf.save());
-
-    return file;
+    return pdf.save();
   }
 
   static pw.Widget _buildPdfSection(String title, List<pw.Widget> children) {
@@ -440,10 +402,7 @@ class PdfService {
     );
   }
 
-  static Future<void> sharePdf(File pdfFile) async {
-    await Printing.sharePdf(
-      bytes: await pdfFile.readAsBytes(),
-      filename: pdfFile.path.split('/').last,
-    );
+  static Future<void> sharePdf(Uint8List pdfBytes, String filename) async {
+    await Printing.sharePdf(bytes: pdfBytes, filename: filename);
   }
 }
