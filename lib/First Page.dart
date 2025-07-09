@@ -1,9 +1,8 @@
-// First Page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
 import 'Model class.dart';
-import 'ShowInventoryListScreen.dart';
+import 'ListOfPartiesScreen.dart';
 import 'inventory app.dart';
 
 class FirstPage extends StatefulWidget {
@@ -15,9 +14,10 @@ class FirstPage extends StatefulWidget {
 
 class _FirstPageState extends State<FirstPage> {
   final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _customerNameController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  String? _selectedPartyType = 'customer';
   bool _isLoading = false;
 
   @override
@@ -35,7 +35,7 @@ class _FirstPageState extends State<FirstPage> {
   @override
   void dispose() {
     _dateController.dispose();
-    _customerNameController.dispose();
+    _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
     super.dispose();
@@ -86,7 +86,7 @@ class _FirstPageState extends State<FirstPage> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                Text("Customer Details",
+                Text("Party Details",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold
@@ -94,9 +94,11 @@ class _FirstPageState extends State<FirstPage> {
                 ),
                 const SizedBox(height: 24),
                 _buildInputCard(
-                  title: "Personal Information",
+                  title: "Party Information",
                   children: [
-                    _buildTextField(_customerNameController, 'Customer Name',
+                    _buildPartyTypeSelector(),
+                    const SizedBox(height: 12),
+                    _buildTextField(_nameController, 'Name',
                         icon: Icons.person_outline),
                     const SizedBox(height: 12),
                     _buildTextField(_phoneController, 'Phone Number',
@@ -106,7 +108,7 @@ class _FirstPageState extends State<FirstPage> {
                     _buildTextField(_addressController, 'Address',
                         maxLines: 2,
                         icon: Icons.location_on_outlined),
-                    _buildClearButton(), // Added clear button here
+                    _buildClearButton(),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -158,6 +160,38 @@ class _FirstPageState extends State<FirstPage> {
     );
   }
 
+  Widget _buildPartyTypeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Party Type",
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: DropdownButton<String>(
+            dropdownColor: Colors.grey[850],
+            isExpanded: true,
+            value: _selectedPartyType,
+            icon: Icon(Icons.arrow_drop_down, color: Colors.orange),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            underline: const SizedBox(),
+            items: const [
+              DropdownMenuItem(value: 'customer', child: Text('Customer')),
+              DropdownMenuItem(value: 'supplier', child: Text('Supplier')),
+            ],
+            onChanged: (value) => setState(() => _selectedPartyType = value),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTextField(
       TextEditingController controller,
       String hintText, {
@@ -192,56 +226,57 @@ class _FirstPageState extends State<FirstPage> {
 
   Widget _buildActionButtons() {
     return Column(
-        children: [
-    _isLoading
-    ? const CircularProgressIndicator(color: Colors.orange)
-        : SizedBox(
-    width: double.infinity,
-    child: ElevatedButton(
-    onPressed: _saveData,
-    style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.orange,
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-    ),
-    ),
-    child: const Text(
-    "Create New Project",
-    style: TextStyle(fontSize: 16, color: Colors.white),
-    ),
-    ),
-
-    ),
-          const SizedBox(height: 16),
-          SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _navigateToAllDataScreen,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                  side: const BorderSide(color: Colors.orange),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-
-                ), child: const Text(
-                "View All Projects",
+      children: [
+        _isLoading
+            ? const CircularProgressIndicator(color: Colors.orange)
+            : SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _saveData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              "Create New Project",
+              style: TextStyle(fontSize: 16, color: Colors.white),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _navigateToListScreen,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange,
+                side: const BorderSide(color: Colors.orange),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                "View All Parties",
                 style: TextStyle(fontSize: 16),
               ),
-              )
-          ),
-    ],
+            )
+        ),
+      ],
     );
-    }
+  }
+
   Widget _buildClearButton() {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: SizedBox(
         width: double.infinity,
         child: TextButton.icon(
-                    label: const Text(
+          icon: const Icon(Icons.clear, color: Colors.orange),
+          label: const Text(
             "Clear Text",
             style: TextStyle(color: Colors.orange, fontSize: 16),
           ),
@@ -256,74 +291,22 @@ class _FirstPageState extends State<FirstPage> {
         ),
       ),
     );
-
   }
 
-  Future<void> _navigateToAllDataScreen() async {
-    try {
-      setState(() => _isLoading = true);
-
-      final databaseRef = FirebaseDatabase.instance.ref("customers");
-      final snapshot = await databaseRef.get();
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      if (snapshot.exists && snapshot.value != null) {
-        final data = snapshot.value as Map<dynamic, dynamic>;
-        final List<CustomerModel> allInventories = [];
-
-        data.forEach((customerKey, customerValue) {
-          if (customerValue is Map && customerValue['inventory'] != null) {
-            final inventories = customerValue['inventory'] as Map<dynamic, dynamic>;
-
-            inventories.forEach((inventoryKey, inventoryValue) {
-              if (inventoryValue is Map) {
-                final inventory = Map<String, dynamic>.from(inventoryValue);
-                inventory['customerId'] = customerKey;
-                inventory['inventoryId'] = inventoryKey;
-                allInventories.add(CustomerModel.fromMap(inventory));
-              }
-            });
-          }
-        });
-
-        if (allInventories.isNotEmpty) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ShowInventoryListScreen(
-                inventoryList: allInventories,
-              ),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("No project data found")),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No customer data found")),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching data: ${e.toString()}")),
-      );
-    }
+  Future<void> _navigateToListScreen() async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ListOfPartiesScreen()),
+    );
   }
 
   Future<void> _saveData() async {
-    final customerName = _customerNameController.text.trim();
+    final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
     final address = _addressController.text.trim();
     final date = _dateController.text.trim();
 
-    if (customerName.isEmpty || phone.isEmpty || address.isEmpty) {
+    if (name.isEmpty || phone.isEmpty || address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all the fields")),
       );
@@ -333,21 +316,22 @@ class _FirstPageState extends State<FirstPage> {
     setState(() => _isLoading = true);
 
     try {
-      final databaseRef = FirebaseDatabase.instance.ref("customers");
-      final newCustomerRef = databaseRef.push();
+      final databaseRef = FirebaseDatabase.instance.ref("parties");
+      final newPartyRef = databaseRef.push();
 
-      await newCustomerRef.set({
-        'customerName': customerName,
+      await newPartyRef.set({
+        'name': name,
         'phone': phone,
         'address': address,
         'date': date,
+        'type': _selectedPartyType,
         'createdAt': ServerValue.timestamp,
       });
 
-      final key = newCustomerRef.key;
+      final key = newPartyRef.key;
       if (key == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to generate customer ID")),
+          const SnackBar(content: Text("Failed to generate party ID")),
         );
         setState(() => _isLoading = false);
         return;
@@ -358,11 +342,12 @@ class _FirstPageState extends State<FirstPage> {
         context,
         MaterialPageRoute(
           builder: (context) => InventoryApp(
-            customerId: key,
-            customerName: customerName,
+            partyId: key,
+            partyName: name,
             phone: phone,
             address: address,
             date: date,
+            partyType: _selectedPartyType!,
             isEditMode: false,
           ),
         ),
@@ -379,10 +364,9 @@ class _FirstPageState extends State<FirstPage> {
   }
 
   void _clearFields() {
-    _customerNameController.clear();
+    _nameController.clear();
     _phoneController.clear();
     _addressController.clear();
-    _setCurrentDateTime(); // Reset date to current time
-
+    _setCurrentDateTime();
   }
 }

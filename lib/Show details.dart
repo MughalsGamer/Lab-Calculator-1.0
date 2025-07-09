@@ -1,4 +1,3 @@
-// Show details.dart
 import 'package:flutter/material.dart';
 import 'PdfService.dart';
 
@@ -61,9 +60,9 @@ class ShowDetailsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSectionCard(
-                title: "Customer Information",
+                title: "Party Information",
                 children: [
-                  _buildInfoRow('Customer:', customerName),
+                  _buildInfoRow('Name:', customerName),
                   _buildInfoRow('Phone:', phone),
                   _buildInfoRow('Address:', address),
                   _buildInfoRow('Date:', date),
@@ -124,8 +123,6 @@ class ShowDetailsScreen extends StatelessWidget {
       ),
     );
   }
-
-
 
   Widget _buildSectionCard({required String title, required List<Widget> children}) {
     return Card(

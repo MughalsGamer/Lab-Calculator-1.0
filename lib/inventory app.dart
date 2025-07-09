@@ -1,27 +1,29 @@
-// inventory app.dart
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'ListOfPartiesScreen.dart';
 import 'Model class.dart';
 import 'ShowInventoryListScreen.dart';
 
 class InventoryApp extends StatefulWidget {
-  final String customerId;
-  final String customerName;
+  final String partyId;
+  final String partyName;
   final String phone;
   final String address;
   final String date;
+  final String partyType;
   final bool isEditMode;
   final String? inventoryId;
   final CustomerModel? initialData;
 
   const InventoryApp({
     super.key,
-    required this.customerId,
-    required this.customerName,
+    required this.partyId,
+    required this.partyName,
     required this.phone,
     required this.address,
     required this.date,
+    required this.partyType,
     this.isEditMode = false,
     this.inventoryId,
     this.initialData,
@@ -73,13 +75,11 @@ class _InventoryAppState extends State<InventoryApp> {
       advanceController.text = model.advance.toString();
       selectedRoom = model.room;
 
-      // Clear existing controllers
       widthControllers.clear();
       heightControllers.clear();
       quantityControllers.clear();
       selectedWalls.clear();
 
-      // Load dimensions
       for (var dim in model.dimensions) {
         widthControllers.add(TextEditingController(text: dim['width'].toString()));
         heightControllers.add(TextEditingController(text: dim['height'].toString()));
@@ -107,7 +107,7 @@ class _InventoryAppState extends State<InventoryApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("${widget.customerName}'s Project"),
+        title: Text("${widget.partyName}'s Project"),
         backgroundColor: Colors.grey[900],
         actions: [
           IconButton(
@@ -128,7 +128,7 @@ class _InventoryAppState extends State<InventoryApp> {
           padding: const EdgeInsets.all(16),
           child: ListView(
             children: [
-              _buildCustomerInfoCard(),
+              _buildPartyInfoCard(),
               const SizedBox(height: 20),
               _buildProjectDetailsCard(),
               const SizedBox(height: 20),
@@ -144,7 +144,7 @@ class _InventoryAppState extends State<InventoryApp> {
     );
   }
 
-  Widget _buildCustomerInfoCard() {
+  Widget _buildPartyInfoCard() {
     return Card(
       elevation: 4,
       color: Colors.grey[850],
@@ -156,15 +156,15 @@ class _InventoryAppState extends State<InventoryApp> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Customer Information",
-              style: TextStyle(
+            Text("${widget.partyType.toUpperCase()} Information",
+              style: const TextStyle(
                   color: Colors.orange,
                   fontWeight: FontWeight.bold,
                   fontSize: 16
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoRow(Icons.person, widget.customerName),
+            _buildInfoRow(Icons.person, widget.partyName),
             _buildInfoRow(Icons.phone, widget.phone),
             _buildInfoRow(Icons.location_on, widget.address),
             _buildInfoRow(Icons.calendar_today, widget.date),
@@ -254,75 +254,6 @@ class _InventoryAppState extends State<InventoryApp> {
     );
   }
 
-  // Widget _buildDimensionsCard() {
-  //   return Card(
-  //     elevation: 4,
-  //     color: Colors.grey[850],
-  //     shape: RoundedRectangleBorder(
-  //       borderRadius: BorderRadius.circular(16),
-  //     ),
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(16),
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Row(
-  //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //             children: [
-  //               const Text("Dimensions",
-  //                 style: TextStyle(
-  //                     color: Colors.orange,
-  //                     fontWeight: FontWeight.bold,
-  //                     fontSize: 16
-  //                 ),
-  //               ),
-  //               IconButton(
-  //                 icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
-  //                 onPressed: _addDimensionField,
-  //               ),
-  //             ],
-  //           ),
-  //           const SizedBox(height: 12),
-  //           // Dimension headers
-  //           (widthControllers.length == 1)
-  //               ? Padding(
-  //             padding: const EdgeInsets.symmetric(vertical: 8),
-  //             child: Row(
-  //               children: [
-  //                 const SizedBox(width: 10),
-  //                 Expanded(flex: 2, child: _buildDimensionHeader("Width")),
-  //                 Expanded(flex: 2, child: _buildDimensionHeader("Height")),
-  //                 Expanded(flex: 2, child: _buildDimensionHeader("Qty")),
-  //                 Expanded( child: _buildDimensionHeader("Wall")),
-  //                 const SizedBox(width: 12),
-  //               ],
-  //             ),
-  //           )
-  //               : Padding(
-  //             padding: const EdgeInsets.symmetric(vertical: 8),
-  //             child: Row(
-  //               children: [
-  //                 Expanded(flex: 2, child: _buildDimensionHeader("Width")),
-  //                 const SizedBox(width: 20),
-  //                 Expanded(flex: 2, child: _buildDimensionHeader("Height")),
-  //                 const SizedBox(width: 10),
-  //                 Expanded(flex: 2, child: _buildDimensionHeader("Qty")),
-  //                 const SizedBox(width: 8),
-  //                 Expanded(flex: 3, child: _buildDimensionHeader("Wall")),
-  //                 const SizedBox(width: 12),
-  //               ],
-  //             ),
-  //           ),
-  //           ...List.generate(widthControllers.length, (index) => _buildDimensionRow(index)),
-  //
-  //         ],
-  //       ),
-  //
-  //     ),
-  //
-  //   );
-  // }
-
   Widget _buildDimensionsCard() {
     return Card(
       elevation: 4,
@@ -352,8 +283,6 @@ class _InventoryAppState extends State<InventoryApp> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // Horizontal scrollable container for the table
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
@@ -361,10 +290,9 @@ class _InventoryAppState extends State<InventoryApp> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Table header
                     Row(
                       children: [
-                        SizedBox(width: 40), // Space for remove button
+                        SizedBox(width: 40),
                         _buildHeaderCell("Width", 100),
                         SizedBox(width: 30,),
                         _buildHeaderCell("Height", 100),
@@ -374,8 +302,6 @@ class _InventoryAppState extends State<InventoryApp> {
                       ],
                     ),
                     const SizedBox(height: 8),
-
-                    // Dimension rows
                     ...List.generate(widthControllers.length, (index) =>
                         _buildDimensionRow(index)
                     ),
@@ -410,7 +336,6 @@ class _InventoryAppState extends State<InventoryApp> {
       children: [
         Row(
           children: [
-            // Remove button
             Container(
               width: 40,
               alignment: Alignment.center,
@@ -421,44 +346,32 @@ class _InventoryAppState extends State<InventoryApp> {
               )
                   : const SizedBox(),
             ),
-
-            // Width input
             _buildDimensionCell(
               controller: widthControllers[index],
               hint: 'W',
               width: 100,
             ),
-
-            // × symbol
             const SizedBox(
               width: 30,
               child: Center(
                 child: Text('×', style: TextStyle(color: Colors.white, fontSize: 20)),
               ),
             ),
-
-            // Height input
             _buildDimensionCell(
               controller: heightControllers[index],
               hint: 'H',
               width: 100,
             ),
-
-            // Qty input
             _buildDimensionCell(
               controller: quantityControllers[index],
               hint: 'Qty',
               width: 60,
             ),
-
-            // Wall selector
             Container(
               width: 100,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: _buildWallSelector(index),
             ),
-
-            // Calculated sq.ft
             Container(
               width: 80,
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -504,18 +417,6 @@ class _InventoryAppState extends State<InventoryApp> {
     );
   }
 
-
-
-  // Widget _buildDimensionHeader(String text) {
-  //   return Text(text,
-  //     style: TextStyle(
-  //         color: Colors.orange,
-  //         fontWeight: FontWeight.bold,
-  //         fontSize: 14
-  //     ),
-  //   );
-  // }
-
   void _addDimensionField() {
     setState(() {
       widthControllers.add(TextEditingController());
@@ -524,58 +425,6 @@ class _InventoryAppState extends State<InventoryApp> {
       selectedWalls.add(null);
     });
   }
-
-  // Widget _buildDimensionRow(int index) {
-  //   return Column(
-  //     children: [
-  //       Row(
-  //         children: [
-  //           Expanded(
-  //             flex: 2,
-  //             child: _buildDimensionInput(widthControllers[index], 'Width (ft)'),
-  //           ),
-  //           const SizedBox(width: 10),
-  //           const Text('×', style: TextStyle(color: Colors.white, fontSize: 20)),
-  //           const SizedBox(width: 10),
-  //           Expanded(
-  //             flex: 2,
-  //             child: _buildDimensionInput(heightControllers[index], 'Height (ft)'),
-  //           ),
-  //           const SizedBox(width: 10),
-  //           Expanded(
-  //             flex: 2,
-  //             child: _buildDimensionInput(quantityControllers[index], 'Qty'),
-  //           ),
-  //           const SizedBox(width: 10),
-  //           Expanded(
-  //             flex: 3,
-  //             child: _buildWallSelector(index),
-  //           ),
-  //           if (widthControllers.length > 1)
-  //             IconButton(
-  //               icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-  //               onPressed: () => _removeDimensionField(index),
-  //             ),
-  //         ],
-  //       ),
-  //       if (widthControllers[index].text.isNotEmpty &&
-  //           heightControllers[index].text.isNotEmpty &&
-  //           quantityControllers[index].text.isNotEmpty &&
-  //           selectedWalls[index] != null)
-  //         Padding(
-  //           padding: const EdgeInsets.only(top: 4, left: 8),
-  //           child: Align(
-  //             alignment: Alignment.centerLeft,
-  //             child: Text(
-  //               '${selectedWalls[index]}: ${_calculateSqFt(index).toStringAsFixed(2)} sq.ft',
-  //               style: TextStyle(color: Colors.grey[400], fontSize: 12),
-  //             ),
-  //           ),
-  //         ),
-  //       const Divider(color: Colors.grey),
-  //     ],
-  //   );
-  // }
 
   void _removeDimensionField(int index) {
     if (widthControllers.length > 1) {
@@ -588,26 +437,6 @@ class _InventoryAppState extends State<InventoryApp> {
       _calculateTotal();
     }
   }
-
-  // Widget _buildDimensionInput(TextEditingController controller, String hint) {
-  //   return TextField(
-  //     controller: controller,
-  //     style: const TextStyle(color: Colors.white),
-  //     keyboardType: TextInputType.number,
-  //     onChanged: (value) => _calculateTotal(),
-  //     decoration: InputDecoration(
-  //       hintText: hint,
-  //       hintStyle: TextStyle(color: Colors.grey[400]),
-  //       filled: true,
-  //       fillColor: Colors.grey[800],
-  //       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-  //       border: OutlineInputBorder(
-  //         borderRadius: BorderRadius.circular(12),
-  //         borderSide: BorderSide.none,
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _buildWallSelector(int index) {
     return Container(
@@ -815,7 +644,7 @@ class _InventoryAppState extends State<InventoryApp> {
     setState(() => _isLoading = true);
 
     try {
-      final databaseRef = FirebaseDatabase.instance.ref("customers/${widget.customerId}/inventory");
+      final databaseRef = FirebaseDatabase.instance.ref("parties/${widget.partyId}/inventory");
       DatabaseReference inventoryRef;
       if (widget.isEditMode && widget.inventoryId != null) {
         inventoryRef = databaseRef.child(widget.inventoryId!);
@@ -840,7 +669,7 @@ class _InventoryAppState extends State<InventoryApp> {
       }
 
       await inventoryRef.set({
-        'customerName': widget.customerName,
+        'customerName': widget.partyName,
         'phone': widget.phone,
         'address': widget.address,
         'date': widget.date,
@@ -894,7 +723,7 @@ class _InventoryAppState extends State<InventoryApp> {
     try {
       setState(() => _isLoading = true);
 
-      final databaseRef = FirebaseDatabase.instance.ref("customers/${widget.customerId}/inventory");
+      final databaseRef = FirebaseDatabase.instance.ref("parties/${widget.partyId}/inventory");
       final snapshot = await databaseRef.get();
 
       if (!mounted) return;
@@ -917,24 +746,30 @@ class _InventoryAppState extends State<InventoryApp> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ShowInventoryListScreen(
-              inventoryList: inventoryList.map((e) => CustomerModel.fromMap(e)).toList(),
+            builder: (context) => PartyProjectsScreen(
+              party: PartyModel(
+                id: widget.partyId,
+                name: widget.partyName,
+                phone: widget.phone,
+                address: widget.address,
+                date: widget.date,
+                type: widget.partyType,
+              ),
             ),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("No projects found")),
-    );
-    }
+          const SnackBar(content: Text("No projects found")),
+        );
+      }
     } catch (e) {
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text("Error: ${e.toString()}")),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString()}")),
+      );
     }
   }
 }
-

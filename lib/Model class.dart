@@ -1,23 +1,21 @@
 class CustomerModel {
-  String? id;
-  String? customerKey;
-  String? inventoryKey;
-  final String customerName;
-  final String phone;
-  final String address;
-  final String date;
-  final String room;
-  final String fileType;
-  final double rate;
-  final double additionalCharges;
-  final double advance;
-  final double totalSqFt;
-  final double totalAmount;
-  final double remainingBalance;
-  final List<Map<String, dynamic>> dimensions;
+  String id;
+  String customerName;
+  String phone;
+  String address;
+  String date;
+  String room;
+  String fileType;
+  double rate;
+  double additionalCharges;
+  double advance;
+  double totalSqFt;
+  double totalAmount;
+  double remainingBalance;
+  List<Map<String, dynamic>> dimensions;
 
   CustomerModel({
-    this.id,
+    required this.id,
     required this.customerName,
     required this.phone,
     required this.address,
@@ -31,8 +29,6 @@ class CustomerModel {
     required this.totalAmount,
     required this.remainingBalance,
     required this.dimensions,
-    this.customerKey,
-    this.inventoryKey,
   });
 
   factory CustomerModel.fromMap(Map<String, dynamic> map) {
@@ -54,8 +50,6 @@ class CustomerModel {
           ?.map((e) => Map<String, dynamic>.from(e))
           .toList() ??
           [],
-      customerKey: map['customerKey']?.toString(),
-      inventoryKey: map['inventoryKey']?.toString(),
     );
   }
 
@@ -75,8 +69,6 @@ class CustomerModel {
       'totalAmount': totalAmount,
       'remainingBalance': remainingBalance,
       'dimensions': dimensions,
-      'customerKey': customerKey,
-      'inventoryKey': inventoryKey
     };
   }
 }
