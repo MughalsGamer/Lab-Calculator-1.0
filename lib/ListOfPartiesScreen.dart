@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 import 'Model class.dart';
+import 'Party Model.dart';
 import 'ShowInventoryListScreen.dart';
 
 class ListOfPartiesScreen extends StatefulWidget {
@@ -11,15 +12,25 @@ class ListOfPartiesScreen extends StatefulWidget {
   State<ListOfPartiesScreen> createState() => _ListOfPartiesScreenState();
 }
 
-class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> {
+class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> with SingleTickerProviderStateMixin {
   final DatabaseReference _ref = FirebaseDatabase.instance.ref().child('parties');
-  List<PartyModel> _parties = [];
+  List<PartyModel> _allParties = [];
+  List<PartyModel> _customers = [];
+  List<PartyModel> _suppliers = [];
   bool _isLoading = true;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _fetchParties();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchParties() async {
@@ -32,20 +43,87 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> {
           data.forEach((partyKey, partyValue) {
             if (partyValue is Map) {
               final partyMap = Map<String, dynamic>.from(partyValue);
-              partyMap['id'] = partyKey;
+              partyMap['id'] = partyKey.toString();
               fetchedParties.add(PartyModel.fromMap(partyMap));
             }
           });
         }
 
         setState(() {
-          _parties = fetchedParties;
+          _allParties = fetchedParties;
+          _customers = fetchedParties.where((party) => party.type == 'customer').toList();
+          _suppliers = fetchedParties.where((party) => party.type == 'supplier').toList();
           _isLoading = false;
         });
       });
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  Widget _buildPartyList(List<PartyModel> parties) {
+    if (parties.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 60,
+              color: Colors.grey[600],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              "No parties found",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: parties.length,
+      itemBuilder: (context, index) {
+        final party = parties[index];
+        return Card(
+          elevation: 4,
+          color: Colors.grey[850],
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: ListTile(
+            leading: Icon(
+              party.type == 'customer' ? Icons.person : Icons.business,
+              color: Colors.orange,
+            ),
+            title: Text(
+              party.name,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+                fontSize: 18,
+              ),
+            ),
+            subtitle: Text(
+              '${party.type.toUpperCase()} • ${party.phone}',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios, color: Colors.orange),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PartyProjectsScreen(party: party),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -60,77 +138,32 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen> {
             onPressed: () => Navigator.pop(context),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.orange,
+          labelColor: Colors.orange,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.person),
+              text: 'Customers',
+            ),
+            Tab(
+              icon: Icon(Icons.business),
+              text: 'Suppliers',
+            ),
+          ],
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.orange))
-          : ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: _parties.length,
-        itemBuilder: (context, index) {
-          final party = _parties[index];
-          return Card(
-            elevation: 4,
-            color: Colors.grey[850],
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: ListTile(
-              leading: Icon(
-                party.type == 'customer' ? Icons.person : Icons.business,
-                color: Colors.orange,
-              ),
-              title: Text(
-                party.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange,
-                  fontSize: 18,
-                ),
-              ),
-              subtitle: Text(
-                '${party.type.toUpperCase()} • ${party.phone}',
-                style: const TextStyle(color: Colors.white70),
-              ),
-              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.orange),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PartyProjectsScreen(party: party),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+          : TabBarView(
+        controller: _tabController,
+        children: [
+          _buildPartyList(_customers),
+          _buildPartyList(_suppliers),
+        ],
       ),
-    );
-  }
-}
-
-class PartyModel {
-  final String id;
-  final String name;
-  final String phone;
-  final String address;
-  final String date;
-  final String type;
-
-  PartyModel({
-    required this.id,
-    required this.name,
-    required this.phone,
-    required this.address,
-    required this.date,
-    required this.type,
-  });
-
-  factory PartyModel.fromMap(Map<String, dynamic> map) {
-    return PartyModel(
-      id: map['id']?.toString() ?? '',
-      name: map['name']?.toString() ?? '',
-      phone: map['phone']?.toString() ?? '',
-      address: map['address']?.toString() ?? '',
-      date: map['date']?.toString() ?? '',
-      type: map['type']?.toString() ?? 'customer',
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import 'Model class.dart';
 import 'ListOfPartiesScreen.dart';
+import 'Party Model.dart';
 
 class PdfService {
   static final PdfColor _primaryColor = PdfColor.fromInt(0xFFFFA500);

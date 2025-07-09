@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'Model class.dart';
+import 'Party Model.dart';
 import 'PdfService.dart';
 import 'Show details.dart';
 import 'inventory app.dart';

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'ListOfPartiesScreen.dart';
 import 'Model class.dart';
+import 'Party Model.dart';
 import 'ShowInventoryListScreen.dart';
 
 class InventoryApp extends StatefulWidget {
