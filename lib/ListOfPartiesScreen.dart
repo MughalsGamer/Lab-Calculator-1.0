@@ -225,6 +225,7 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
         title: const Text('All Parties'),
         backgroundColor: Colors.grey[900],
         actions: [
+          IconButton(onPressed: (){}, icon: Icon(Icons.home)),
           IconButton(
             icon: const Icon(Icons.add, color: Colors.orange),
             onPressed: () => Navigator.pop(context),
