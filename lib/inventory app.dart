@@ -1,10 +1,11 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'ListOfPartiesScreen.dart';
 import 'Model class.dart';
 import 'Party Model.dart';
-import 'ShowInventoryListScreen.dart';
+import 'PartyProjectsScreen.dart';
 
 class InventoryApp extends StatefulWidget {
   final String partyId;
@@ -42,6 +43,7 @@ class _InventoryAppState extends State<InventoryApp> {
 
   final List<String> walls = ['Front', 'Back', 'Right', 'Left', 'Roof','Front+Back','Left+Right','Flex Only'];
 
+  final TextEditingController _dateController = TextEditingController();
   final TextEditingController fileTypeController = TextEditingController();
   final TextEditingController rateController = TextEditingController();
   final TextEditingController additionalChargesController = TextEditingController();
@@ -58,10 +60,17 @@ class _InventoryAppState extends State<InventoryApp> {
   double advanceAmount = 0.0;
   double remainingBalance = 0.0;
 
+  void _setCurrentDateTime() {
+    final now = DateTime.now();
+    final formatted = DateFormat('dd MMM yyyy, hh:mm a').format(now);
+    _dateController.text = formatted;
+  }
+
   @override
   void initState() {
     super.initState();
     _calculateTotal();
+    _setCurrentDateTime();
 
     if (widget.isEditMode && widget.initialData != null) {
       _loadInitialData(widget.initialData!);
@@ -75,6 +84,7 @@ class _InventoryAppState extends State<InventoryApp> {
       additionalChargesController.text = model.additionalCharges.toString();
       advanceController.text = model.advance.toString();
       selectedRoom = model.room;
+      _dateController.text = model.date;
 
       widthControllers.clear();
       heightControllers.clear();
@@ -94,6 +104,7 @@ class _InventoryAppState extends State<InventoryApp> {
 
   @override
   void dispose() {
+    _dateController.dispose();
     fileTypeController.dispose();
     rateController.dispose();
     additionalChargesController.dispose();
@@ -108,7 +119,7 @@ class _InventoryAppState extends State<InventoryApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("${widget.partyName}'s Project"),
+        title: Text("${widget.partyName}'s Inventory"),
         backgroundColor: Colors.grey[900],
         actions: [
           IconButton(
@@ -130,6 +141,18 @@ class _InventoryAppState extends State<InventoryApp> {
           child: ListView(
             children: [
               _buildPartyInfoCard(),
+              const SizedBox(height: 20),
+              _buildInputCard(
+                title: "Appointment",
+                children: [
+                  _buildTextField(
+                    _dateController,
+                    'Date & Time',
+                    icon: Icons.calendar_today_outlined,
+                    readOnly: true,
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
               _buildProjectDetailsCard(),
               const SizedBox(height: 20),
@@ -168,7 +191,33 @@ class _InventoryAppState extends State<InventoryApp> {
             _buildInfoRow(Icons.person, widget.partyName),
             _buildInfoRow(Icons.phone, widget.phone),
             _buildInfoRow(Icons.location_on, widget.address),
-            _buildInfoRow(Icons.calendar_today, widget.date),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputCard({required String title, required List<Widget> children}) {
+    return Card(
+      elevation: 4,
+      color: Colors.grey[850],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+              style: const TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...children,
           ],
         ),
       ),
@@ -214,7 +263,7 @@ class _InventoryAppState extends State<InventoryApp> {
             const SizedBox(height: 16),
             _buildRoomSelector(),
             const SizedBox(height: 16),
-            _buildTextField(fileTypeController, 'Material Type', icon: Icons.construction),
+            _buildTextField(fileTypeController, 'Material Type', icon: Icons.construction, readOnly: false),
           ],
         ),
       ),
@@ -489,15 +538,15 @@ class _InventoryAppState extends State<InventoryApp> {
             const SizedBox(height: 16),
             _buildTextField(rateController, 'Rate per sq.ft',
                 keyboardType: TextInputType.number,
-                icon: Icons.attach_money),
+                icon: Icons.attach_money, readOnly: false),
             const SizedBox(height: 12),
             _buildTextField(additionalChargesController, 'Additional Charges',
                 keyboardType: TextInputType.number,
-                icon: Icons.receipt_long),
+                icon: Icons.receipt_long, readOnly: false),
             const SizedBox(height: 12),
             _buildTextField(advanceController, 'Advance Payment',
                 keyboardType: TextInputType.number,
-                icon: Icons.payment),
+                icon: Icons.payment, readOnly: false),
             const SizedBox(height: 20),
             _buildFinancialSummary(),
           ],
@@ -510,7 +559,7 @@ class _InventoryAppState extends State<InventoryApp> {
       TextEditingController controller,
       String hintText, {
         TextInputType? keyboardType,
-        IconData? icon,
+        IconData? icon, required bool readOnly,
       }) {
     return Container(
       decoration: BoxDecoration(
@@ -522,6 +571,7 @@ class _InventoryAppState extends State<InventoryApp> {
         style: const TextStyle(color: Colors.white),
         keyboardType: keyboardType,
         onChanged: (value) => _calculateTotal(),
+        readOnly: readOnly,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey[400]),
@@ -598,7 +648,7 @@ class _InventoryAppState extends State<InventoryApp> {
         ),
       ),
       child: const Text(
-        "Save Project Details",
+        "Save Inventory Details",
         style: TextStyle(fontSize: 16, color: Colors.white),
       ),
     );
@@ -673,7 +723,7 @@ class _InventoryAppState extends State<InventoryApp> {
         'customerName': widget.partyName,
         'phone': widget.phone,
         'address': widget.address,
-        'date': widget.date,
+        'date': _dateController.text, // Use the date from the controller
         'room': selectedRoom,
         'fileType': fileTypeController.text,
         'rate': rateController.text,
@@ -688,7 +738,7 @@ class _InventoryAppState extends State<InventoryApp> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Project saved successfully")),
+        const SnackBar(content: Text("Inventory details saved successfully")),
       );
 
       _clearForm();
@@ -717,6 +767,7 @@ class _InventoryAppState extends State<InventoryApp> {
       totalAmount = 0.0;
       advanceAmount = 0.0;
       remainingBalance = 0.0;
+      _setCurrentDateTime(); // Reset to current date/time
     });
   }
 

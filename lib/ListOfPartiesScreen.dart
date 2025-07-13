@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
 import 'First Page.dart';
+import 'Model class.dart';
 import 'Party Model.dart';
-import 'ShowInventoryListScreen.dart';
+import 'PartyProjectsScreen.dart';
+import 'PartyWithProjects.dart';
+import 'PdfService.dart';
+
+
 
 class ListOfPartiesScreen extends StatefulWidget {
-  const ListOfPartiesScreen({super.key});
+  const ListOfPartiesScreen({super.key,});
+
 
   @override
   State<ListOfPartiesScreen> createState() => _ListOfPartiesScreenState();
@@ -32,6 +40,66 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+
+
+
+
+  Future<List<CustomerModel>> _fetchProjectsForParty(String partyId) async {
+    try {
+      final snapshot = await _ref.child(partyId).child('inventory').get();
+      final projects = <CustomerModel>[];
+
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<dynamic, dynamic>;
+        data.forEach((key, value) {
+          final projectMap = Map<String, dynamic>.from(value);
+          projectMap['id'] = key.toString();
+          projects.add(CustomerModel.fromMap(projectMap));
+        });
+      }
+
+      return projects;
+    } catch (e) {
+      return [];
+    }
+  }
+
+
+  Future<void> _generateCategoryPdf(List<PartyModel> parties, String category) async {
+    if (parties.isEmpty) {
+      Fluttertoast.showToast(msg: "No $category to generate PDF");
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final partiesWithProjects = <PartyWithProjects>[];
+
+      for (var party in parties) {
+        final projects = await _fetchProjectsForParty(party.id);
+        partiesWithProjects.add(PartyWithProjects(party, projects));
+      }
+
+      Navigator.pop(context); // Close loading dialog
+
+      final pdfBytes = await PdfService.generateCategoryPdf(
+        partiesWithProjects: partiesWithProjects, // Fixed parameter name
+        category: category, parties: [],
+      );
+
+      final fileName = '${category}_Full_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
+      await PdfService.sharePdf(pdfBytes, fileName);
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog
+      Fluttertoast.showToast(msg: "Failed to generate PDF: $e");
+    }
   }
 
   Future<void> _fetchParties() async {
@@ -226,6 +294,8 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
         title: const Text('All Parties'),
         backgroundColor: Colors.grey[900],
         actions: [
+          // In the build method's AppBar actions
+
           IconButton(onPressed: (){
             Navigator.push(
               context,
@@ -262,3 +332,4 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
     );
   }
 }
+

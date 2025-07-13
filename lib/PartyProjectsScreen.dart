@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
 import 'First Page.dart';
 import 'Model class.dart';
 import 'Party Model.dart';
+import 'PartyWithProjects.dart';
 import 'PdfService.dart';
 import 'Show details.dart';
 import 'inventory app.dart';
@@ -26,6 +28,54 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
   void initState() {
     super.initState();
     _fetchProjects();
+  }
+
+  Future<List<CustomerModel>> _fetchProjectsForParty(String partyId) async {
+    try {
+      final snapshot = await _ref.child(partyId).child('inventory').get();
+      final projects = <CustomerModel>[];
+
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<dynamic, dynamic>;
+        data.forEach((key, value) {
+          final projectMap = Map<String, dynamic>.from(value);
+          projectMap['id'] = key.toString();
+          projects.add(CustomerModel.fromMap(projectMap));
+        });
+      }
+
+      return projects;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> _generatePartyPdf() async {
+    if (_projects.isEmpty) {
+      Fluttertoast.showToast(msg: "No projects to generate PDF");
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final pdfBytes = await PdfService.generatePartyProjectsPdf(
+        party: widget.party,
+        projects: _projects,
+      );
+
+      Navigator.pop(context); // Close loading dialog
+
+      final fileName = '${widget.party.name}_Projects_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
+      await PdfService.sharePdf(pdfBytes, fileName);
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog
+      Fluttertoast.showToast(msg: "Failed to generate PDF: $e");
+    }
   }
 
   Future<void> _fetchProjects() async {
@@ -83,31 +133,6 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
     }
   }
 
-  Future<void> _generateAndSharePdf(CustomerModel model) async {
-    try {
-      await PdfService.generateInventoryPdf(
-        customerName: model.customerName,
-        phone: model.phone,
-        address: model.address,
-        date: model.date,
-        room: model.room,
-        fileType: model.fileType,
-        rate: model.rate.toString(),
-        additionalCharges: model.additionalCharges.toString(),
-        advance: model.advance.toString(),
-        totalSqFt: model.totalSqFt.toString(),
-        totalAmount: model.totalAmount.toString(),
-        remainingBalance: model.remainingBalance.toString(),
-        dimensions: model.dimensions,
-      );
-    } catch (e) {
-      Fluttertoast.showToast(
-        msg: "Failed to generate PDF: $e",
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    }
-  }
 
   void _navigateToEditScreen(BuildContext context, CustomerModel model) {
     Navigator.push(
@@ -135,9 +160,9 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
         title: Text("${widget.party.name}'s Projects"),
         backgroundColor: Colors.grey[900],
         actions: [
-          IconButton(onPressed: (){
-            _generateAndSharePdf(_projects[0]);
-          }, icon: Icon(Icons.picture_as_pdf)),
+        IconButton(
+        onPressed: _generatePartyPdf,
+        icon: const Icon(Icons.picture_as_pdf)),
           IconButton(onPressed: (){
             Navigator.push(
               context,

@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'Party Model.dart';
+import 'PartyWithProjects.dart';
 import 'PdfService.dart';
 
 class ShowDetailsScreen extends StatelessWidget {
@@ -34,6 +38,10 @@ class ShowDetailsScreen extends StatelessWidget {
     required this.remainingBalance,
     required this.dimensions,
   });
+
+
+
+
 
   @override
   Widget build(BuildContext context) {

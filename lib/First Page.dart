@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:intl/intl.dart';
 import 'ListOfPartiesScreen.dart';
 import 'inventory app.dart';
 
@@ -12,7 +11,6 @@ class FirstPage extends StatefulWidget {
 }
 
 class _FirstPageState extends State<FirstPage> {
-  final TextEditingController _dateController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
@@ -20,20 +18,7 @@ class _FirstPageState extends State<FirstPage> {
   bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    _setCurrentDateTime();
-  }
-
-  void _setCurrentDateTime() {
-    final now = DateTime.now();
-    final formatted = DateFormat('dd MMM yyyy, hh:mm a').format(now);
-    _dateController.text = formatted;
-  }
-
-  @override
   void dispose() {
-    _dateController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
@@ -108,18 +93,6 @@ class _FirstPageState extends State<FirstPage> {
                         maxLines: 2,
                         icon: Icons.location_on_outlined),
                     _buildClearButton(),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _buildInputCard(
-                  title: "Appointment",
-                  children: [
-                    _buildTextField(
-                      _dateController,
-                      'Date & Time',
-                      readOnly: true,
-                      icon: Icons.calendar_today_outlined,
-                    ),
                   ],
                 ),
                 const SizedBox(height: 30),
@@ -241,7 +214,7 @@ class _FirstPageState extends State<FirstPage> {
               ),
             ),
             child: const Text(
-              "Create New Project",
+              "Save & Create Inventory",
               style: TextStyle(fontSize: 16, color: Colors.white),
             ),
           ),
@@ -304,7 +277,6 @@ class _FirstPageState extends State<FirstPage> {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
     final address = _addressController.text.trim();
-    final date = _dateController.text.trim();
 
     if (name.isEmpty || phone.isEmpty || address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -323,7 +295,6 @@ class _FirstPageState extends State<FirstPage> {
         'name': name,
         'phone': phone,
         'address': address,
-        'date': date,
         'type': _selectedPartyType,
         'createdAt': ServerValue.timestamp,
       });
@@ -346,9 +317,8 @@ class _FirstPageState extends State<FirstPage> {
             partyName: name,
             phone: phone,
             address: address,
-            date: date,
             partyType: _selectedPartyType!,
-            isEditMode: false,
+            isEditMode: false, date: '',
           ),
         ),
       );
@@ -367,6 +337,5 @@ class _FirstPageState extends State<FirstPage> {
     _nameController.clear();
     _phoneController.clear();
     _addressController.clear();
-    _setCurrentDateTime();
   }
 }
