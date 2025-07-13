@@ -133,8 +133,7 @@ class PdfService {
       pw.Center(
         child: pw.Text('Thank you for choosing Graphics Lab!',
             style: pw.TextStyle(
-                fontStyle: pw.FontStyle.italic,
-                color: _primaryColor)),
+                  color: _primaryColor)),
       )
     ];
   }
@@ -383,7 +382,7 @@ class PdfService {
                 pw.Center(
                   child: pw.Text('Thank you for choosing Graphics Lab!',
                       style: pw.TextStyle(
-                          fontStyle: pw.FontStyle.italic,
+
                           color: _primaryColor,
                           fontSize: 16)),
                 )

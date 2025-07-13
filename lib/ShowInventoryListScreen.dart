@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'First Page.dart';
 import 'Model class.dart';
 import 'Party Model.dart';
 import 'PdfService.dart';
@@ -134,6 +135,15 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
         title: Text("${widget.party.name}'s Projects"),
         backgroundColor: Colors.grey[900],
         actions: [
+          IconButton(onPressed: (){
+            _generateAndSharePdf(_projects[0]);
+          }, icon: Icon(Icons.picture_as_pdf)),
+          IconButton(onPressed: (){
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => FirstPage()),
+            );
+          }, icon: Icon(Icons.home)),
           IconButton(
             icon: const Icon(Icons.add, color: Colors.orange),
             onPressed: () {

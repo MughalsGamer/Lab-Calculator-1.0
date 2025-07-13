@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'First Page.dart';
 import 'Party Model.dart';
 import 'ShowInventoryListScreen.dart';
 
@@ -225,7 +226,12 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
         title: const Text('All Parties'),
         backgroundColor: Colors.grey[900],
         actions: [
-          IconButton(onPressed: (){}, icon: Icon(Icons.home)),
+          IconButton(onPressed: (){
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => FirstPage()),
+            );
+          }, icon: Icon(Icons.home)),
           IconButton(
             icon: const Icon(Icons.add, color: Colors.orange),
             onPressed: () => Navigator.pop(context),

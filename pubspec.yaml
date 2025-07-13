@@ -42,6 +42,8 @@ dependencies:
   fluttertoast:
   path_provider:
   html:
+  share_plus:
+
 
 dev_dependencies:
   flutter_test:

@@ -86,7 +86,7 @@ class ShowDetailsScreen extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text('No dimensions available',
-                          style: TextStyle(color: Colors.white70, fontStyle: FontStyle.italic)),
+                          style: TextStyle(color: Colors.white70, )),
                     )
                   else
                     for (var dim in dimensions)
