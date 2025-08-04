@@ -53,7 +53,7 @@ class _InventoryAppState extends State<InventoryApp> {
   final List<TextEditingController> quantityControllers = [TextEditingController()];
 
   String? selectedRoom;
-  final List<String?> selectedWalls = [null];
+  final List<String?> selectedWalls = ['Flex Only'];
   bool _isLoading = false;
   double totalSqFt = 0.0;
   double totalAmount = 0.0;
@@ -472,7 +472,7 @@ class _InventoryAppState extends State<InventoryApp> {
       widthControllers.add(TextEditingController());
       heightControllers.add(TextEditingController());
       quantityControllers.add(TextEditingController()..text = '1');
-      selectedWalls.add(null);
+      selectedWalls.add('Flex Only');
     });
   }
 
