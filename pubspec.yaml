@@ -46,6 +46,14 @@ dependencies:
   path_provider:
   html:
   share_plus:
+  flutter_contacts:
+  permission_handler:   # For permissions
+  geolocator:   # For location
+  geocoding:   # For address reverse geocoding
+  google_maps_flutter:
+
+
+
 
 
 

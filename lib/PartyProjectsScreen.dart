@@ -13,6 +13,8 @@ import 'inventory app.dart';
 class PartyProjectsScreen extends StatefulWidget {
   final PartyModel party;
 
+
+
   const PartyProjectsScreen({super.key, required this.party});
 
   @override

@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_contacts/contact.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'ListOfPartiesScreen.dart';
+import 'Map Picker Screen.dart';
 import 'inventory app.dart';
 
 class FirstPage extends StatefulWidget {
@@ -23,6 +31,322 @@ class _FirstPageState extends State<FirstPage> {
     _phoneController.dispose();
     _addressController.dispose();
     super.dispose();
+  }
+
+  // Contact picker function
+  Future<void> _pickContact() async {
+    try {
+      // Request permission
+      bool permissionGranted = await FlutterContacts.requestPermission();
+
+      if (!permissionGranted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contacts permission denied')),
+        );
+        return;
+      }
+
+      // Open contact picker
+      final Contact? contact = await FlutterContacts.openExternalPick();
+
+      if (contact == null) return;
+
+      if (!mounted) return;
+      setState(() {
+        // Name
+        _nameController.text = contact.displayName;
+
+        // Phone (first number)
+        if (contact.phones.isNotEmpty) {
+          _phoneController.text = contact.phones.first.number;
+        }
+
+        // Address
+        if (contact.addresses.isNotEmpty) {
+          final address = contact.addresses.first;
+          String fullAddress = '';
+
+          // Use the address properties directly
+          final street = address.street;
+          final city = address.city;
+          final postalCode = address.postalCode;
+          final country = address.country;
+
+          if (street.isNotEmpty) {
+            fullAddress += street;
+          }
+          if (city.isNotEmpty) {
+            fullAddress += fullAddress.isNotEmpty ? ', $city' : city;
+          }
+
+          if (postalCode.isNotEmpty) {
+            fullAddress += fullAddress.isNotEmpty ? ', $postalCode' : postalCode;
+          }
+          if (country.isNotEmpty) {
+            fullAddress += fullAddress.isNotEmpty ? ', $country' : country;
+          }
+
+          _addressController.text = fullAddress;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking contact: $e')),
+      );
+    }
+  }
+
+  // Platform-aware current location function
+  Future<void> _getCurrentLocation() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      if (kIsWeb) {
+        // Web implementation
+        await _getCurrentLocationWeb();
+      } else {
+        // Mobile implementation
+        await _getCurrentLocationMobile();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error getting location: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+
+  Future<Position> getLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw 'Location services are disabled.';
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+  }
+
+
+  // Mobile location implementation
+  Future<void> _getCurrentLocationMobile() async {
+    // Check location permission
+    PermissionStatus status = await Permission.location.status;
+    if (status.isDenied) {
+      status = await Permission.location.request();
+    }
+
+    if (!status.isGranted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permission denied')),
+      );
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    // Get address from coordinates
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+
+    if (placemarks.isNotEmpty) {
+      Placemark place = placemarks.first;
+      String address = _buildAddressString(place);
+      _addressController.text = address;
+    }
+  }
+
+  // Web location implementation
+  Future<void> _getCurrentLocationWeb() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission denied');
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks.first;
+          String address = _buildAddressString(place);
+          _addressController.text = address;
+        } else {
+          _addressController.text =
+          '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+        }
+      } catch (_) {
+        _addressController.text =
+        '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  String _buildAddressString(Placemark place) {
+    String address = '';
+
+    if (place.street != null && place.street!.isNotEmpty) {
+      address += place.street!;
+    }
+    if (place.locality != null && place.locality!.isNotEmpty) {
+      address += address.isNotEmpty ? ', ${place.locality!}' : place.locality!;
+    }
+    if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
+      address += address.isNotEmpty ? ', ${place.subAdministrativeArea!}' : place.subAdministrativeArea!;
+    }
+    if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+      address += address.isNotEmpty ? ', ${place.administrativeArea!}' : place.administrativeArea!;
+    }
+    if (place.country != null && place.country!.isNotEmpty) {
+      address += address.isNotEmpty ? ', ${place.country!}' : place.country!;
+    }
+
+    return address;
+  }
+
+  Future<void> _openMapPicker() async {
+    if (kIsWeb) {
+      // For web, show a dialog for manual address input or use Google Places API
+      _showWebAddressInput();
+      return;
+    }
+
+    // Mobile: Open map picker
+    LatLng? currentPosition;
+
+    PermissionStatus status = await Permission.location.status;
+    if (status.isGranted) {
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+        );
+        currentPosition = LatLng(position.latitude, position.longitude);
+      } catch (e) {
+        // Use default position if can't get current location
+      }
+    }
+
+    final address = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapPickerScreen(initialPosition: currentPosition),
+      ),
+    );
+
+    if (address != null && address is String) {
+      if (!mounted) return;
+      setState(() {
+        _addressController.text = address;
+      });
+    }
+  }
+
+  void _showWebAddressInput() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String address = _addressController.text;
+        return AlertDialog(
+          title: const Text('Enter Address'),
+          content: TextField(
+            controller: TextEditingController(text: address),
+            onChanged: (value) => address = value,
+            decoration: const InputDecoration(
+              hintText: 'Enter full address',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() => _addressController.text = address);
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLocationOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.my_location, color: Colors.orange),
+              title: const Text('Use Current Location', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _getCurrentLocation();
+              },
+            ),
+            if (!kIsWeb) // Only show map picker on mobile
+              ListTile(
+                leading: const Icon(Icons.map, color: Colors.orange),
+                title: const Text('Pick on Map', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _openMapPicker();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.edit_location, color: Colors.orange),
+              title: const Text('Enter Address Manually', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _showWebAddressInput();
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -86,13 +410,17 @@ class _FirstPageState extends State<FirstPage> {
                         icon: Icons.person_outline),
                     const SizedBox(height: 12),
                     _buildTextField(_phoneController, 'Phone Number',
-                        keyboardType: TextInputType.phone,
-                        icon: Icons.phone_android_outlined),
+                      keyboardType: TextInputType.phone,
+                      icon: Icons.contacts,
+                      onIconPressed: _pickContact,
+                    ),
                     const SizedBox(height: 12),
                     _buildTextField(_addressController, 'Address',
-                        maxLines: 2,
-                        icon: Icons.location_on_outlined),
-                    _buildClearButton(),
+                      maxLines: 2,
+                      icon: Icons.location_on,
+                      onIconPressed: _showLocationOptions,
+                      readOnly: true, // Make it read-only so user clicks icon
+                    ),
                   ],
                 ),
                 const SizedBox(height: 30),
@@ -150,7 +478,7 @@ class _FirstPageState extends State<FirstPage> {
             dropdownColor: Colors.grey[850],
             isExpanded: true,
             value: _selectedPartyType,
-            icon: Icon(Icons.arrow_drop_down, color: Colors.orange),
+            icon: const Icon(Icons.arrow_drop_down, color: Colors.orange),
             style: const TextStyle(color: Colors.white, fontSize: 16),
             underline: const SizedBox(),
             items: const [
@@ -158,7 +486,11 @@ class _FirstPageState extends State<FirstPage> {
               DropdownMenuItem(value: 'supplier', child: Text('Supplier')),
               DropdownMenuItem(value: 'fitter', child: Text('Fitter')),
             ],
-            onChanged: (value) => setState(() => _selectedPartyType = value),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedPartyType = value);
+              }
+            },
           ),
         ),
       ],
@@ -172,6 +504,7 @@ class _FirstPageState extends State<FirstPage> {
         bool readOnly = false,
         int? maxLines = 1,
         IconData? icon,
+        VoidCallback? onIconPressed,
       }) {
     return Container(
       decoration: BoxDecoration(
@@ -187,7 +520,12 @@ class _FirstPageState extends State<FirstPage> {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey[400]),
-          prefixIcon: icon != null ? Icon(icon, color: Colors.orange) : null,
+          prefixIcon: icon != null
+              ? IconButton(
+            icon: Icon(icon, color: Colors.orange),
+            onPressed: onIconPressed,
+          )
+              : null,
           filled: true,
           fillColor: Colors.transparent,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -239,30 +577,6 @@ class _FirstPageState extends State<FirstPage> {
             )
         ),
       ],
-    );
-  }
-
-  Widget _buildClearButton() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
-      child: SizedBox(
-        width: double.infinity,
-        child: TextButton.icon(
-          icon: const Icon(Icons.clear, color: Colors.orange),
-          label: const Text(
-            "Clear Text",
-            style: TextStyle(color: Colors.orange, fontSize: 16),
-          ),
-          onPressed: _clearFields,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.orange.withOpacity(0.5)),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -318,7 +632,8 @@ class _FirstPageState extends State<FirstPage> {
             phone: phone,
             address: address,
             partyType: _selectedPartyType!,
-            isEditMode: false, date: '',
+            isEditMode: false,
+            date: '',
           ),
         ),
       );
@@ -332,10 +647,5 @@ class _FirstPageState extends State<FirstPage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  void _clearFields() {
-    _nameController.clear();
-    _phoneController.clear();
-    _addressController.clear();
-  }
 }
+

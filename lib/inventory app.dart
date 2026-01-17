@@ -50,7 +50,9 @@ class _InventoryAppState extends State<InventoryApp> {
   final TextEditingController advanceController = TextEditingController();
   final List<TextEditingController> widthControllers = [TextEditingController()];
   final List<TextEditingController> heightControllers = [TextEditingController()];
-  final List<TextEditingController> quantityControllers = [TextEditingController()];
+  final List<TextEditingController> quantityControllers = [ TextEditingController(text: '1')
+  ];
+
 
   String? selectedRoom;
   final List<String?> selectedWalls = ['Flex Only'];
@@ -59,6 +61,7 @@ class _InventoryAppState extends State<InventoryApp> {
   double totalAmount = 0.0;
   double advanceAmount = 0.0;
   double remainingBalance = 0.0;
+
 
   void _setCurrentDateTime() {
     final now = DateTime.now();
@@ -414,6 +417,7 @@ class _InventoryAppState extends State<InventoryApp> {
             ),
             _buildDimensionCell(
               controller: quantityControllers[index],
+
               hint: 'Qty',
               width: 60,
             ),
@@ -473,6 +477,7 @@ class _InventoryAppState extends State<InventoryApp> {
       heightControllers.add(TextEditingController());
       quantityControllers.add(TextEditingController()..text = '1');
       selectedWalls.add('Flex Only');
+
     });
   }
 
