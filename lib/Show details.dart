@@ -209,7 +209,7 @@ class ShowDetailsScreen extends StatelessWidget {
           name: fileName,
         );
       } else {
-        await PdfService.sharePdf(pdfBytes, fileName);
+        await PdfService.printPdf(pdfBytes: pdfBytes);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

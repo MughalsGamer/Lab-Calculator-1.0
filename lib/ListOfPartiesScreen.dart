@@ -90,34 +90,34 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    try {
-      final partiesWithProjects = <PartyWithProjects>[];
-
-      for (var party in parties) {
-        final projects = await _fetchProjectsForParty(party.id);
-        partiesWithProjects.add(PartyWithProjects(party, projects));
-      }
-
-      // Check if widget is still mounted before popping dialog
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context); // Close loading dialog
-      }
-
-      final pdfBytes = await PdfService.generateCategoryPdf(
-        partiesWithProjects: partiesWithProjects,
-        category: category,
-        parties: [],
-      );
-
-      final fileName = '${category}_Full_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
-      await PdfService.sharePdf(pdfBytes, fileName);
-    } catch (e) {
-      // Check if widget is still mounted before popping dialog
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context); // Close loading dialog
-      }
-      Fluttertoast.showToast(msg: "Failed to generate PDF: $e");
-    }
+    // try {
+    //   final partiesWithProjects = <PartyWithProjects>[];
+    //
+    //   for (var party in parties) {
+    //     final projects = await _fetchProjectsForParty(party.id);
+    //     partiesWithProjects.add(PartyWithProjects(party, projects));
+    //   }
+    //
+    //   // Check if widget is still mounted before popping dialog
+    //   if (mounted && Navigator.canPop(context)) {
+    //     Navigator.pop(context); // Close loading dialog
+    //   }
+    //
+    //   final pdfBytes = await PdfService.generateCategoryPdf(
+    //     partiesWithProjects: partiesWithProjects,
+    //     category: category,
+    //     parties: [],
+    //   );
+    //
+    //   final fileName = '${category}_Full_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
+    //   await PdfService.sharePdf(pdfBytes, fileName);
+    // } catch (e) {
+    //   // Check if widget is still mounted before popping dialog
+    //   if (mounted && Navigator.canPop(context)) {
+    //     Navigator.pop(context); // Close loading dialog
+    //   }
+    //   Fluttertoast.showToast(msg: "Failed to generate PDF: $e");
+    // }
   }
 
   Future<void> _fetchParties() async {

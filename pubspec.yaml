@@ -51,7 +51,9 @@ dependencies:
   geolocator:   # For location
   geocoding:   # For address reverse geocoding
   google_maps_flutter:
-  open_file:   # Ye important hai mobile ke liye
+  open_file:
+
+
 
 
 

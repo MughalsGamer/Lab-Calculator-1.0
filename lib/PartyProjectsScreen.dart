@@ -103,7 +103,26 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
   //   }
   // }
 
+  void _handlePdfActions() {
+    if (_projects.isEmpty) {
+      Fluttertoast.showToast(msg: "No projects to generate PDF");
+      return;
+    }
+
+    PdfService.handlePdfActions(
+      context: context,
+      generatePdf: () async {
+        return await PdfService.generatePartyProjectsPdf(
+          party: widget.party,
+          projects: _projects,
+        );
+      },
+      fileName: '${widget.party.name}_Projects_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf',
+    );
+  }
+
 // Call this method in _fetchProjects after setting _projects
+
   Future<void> _fetchProjects() async {
     try {
       _ref.child(widget.party.id).child('inventory').onValue.listen((event) async {
@@ -208,7 +227,7 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
       Navigator.pop(context); // Close loading dialog
 
       final fileName = '${widget.party.name}_Projects_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
-      await PdfService.sharePdf(pdfBytes, fileName);
+      await PdfService.printPdf(pdfBytes: pdfBytes,);
     } catch (e) {
       Navigator.pop(context); // Close loading dialog
       Fluttertoast.showToast(msg: "Failed to generate PDF: $e");
@@ -293,13 +312,16 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar:
+      AppBar(
         title: Text("${widget.party.name}'s Projects"),
         backgroundColor: Colors.grey[900],
         actions: [
-        IconButton(
-        onPressed: _generatePartyPdf,
-        icon: const Icon(Icons.picture_as_pdf)),
+          // PDF Actions Button
+          IconButton(
+            onPressed: _handlePdfActions,
+            icon: const Icon(Icons.picture_as_pdf),
+          ),
           IconButton(onPressed: (){
             Navigator.push(
               context,
