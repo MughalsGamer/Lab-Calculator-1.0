@@ -5,6 +5,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'ListOfPartiesScreen.dart';
@@ -419,7 +420,7 @@ class _FirstPageState extends State<FirstPage> {
                       maxLines: 2,
                       icon: Icons.location_on,
                       onIconPressed: _showLocationOptions,
-                      readOnly: true, // Make it read-only so user clicks icon
+                      // Make it read-only so user clicks icon
                     ),
                   ],
                 ),
@@ -587,6 +588,7 @@ class _FirstPageState extends State<FirstPage> {
     );
   }
 
+  // In FirstPage.dart, update the _saveData method:
   Future<void> _saveData() async {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
@@ -605,12 +607,17 @@ class _FirstPageState extends State<FirstPage> {
       final databaseRef = FirebaseDatabase.instance.ref("parties");
       final newPartyRef = databaseRef.push();
 
+      // In FirstPage.dart, update the _saveData method:
       await newPartyRef.set({
         'name': name,
         'phone': phone,
         'address': address,
         'type': _selectedPartyType,
+        'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
         'createdAt': ServerValue.timestamp,
+        'totalAmount': 0.0, // Initialize totals
+        'totalAdvance': 0.0,
+        'totalRemaining': 0.0,
       });
 
       final key = newPartyRef.key;
@@ -633,7 +640,7 @@ class _FirstPageState extends State<FirstPage> {
             address: address,
             partyType: _selectedPartyType!,
             isEditMode: false,
-            date: '',
+            date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
           ),
         ),
       );
@@ -647,5 +654,66 @@ class _FirstPageState extends State<FirstPage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  // Future<void> _saveData() async {
+  //   final name = _nameController.text.trim();
+  //   final phone = _phoneController.text.trim();
+  //   final address = _addressController.text.trim();
+  //
+  //   if (name.isEmpty || phone.isEmpty || address.isEmpty) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("Please fill all the fields")),
+  //     );
+  //     return;
+  //   }
+  //
+  //   setState(() => _isLoading = true);
+  //
+  //   try {
+  //     final databaseRef = FirebaseDatabase.instance.ref("parties");
+  //     final newPartyRef = databaseRef.push();
+  //
+  //     await newPartyRef.set({
+  //       'name': name,
+  //       'phone': phone,
+  //       'address': address,
+  //       'type': _selectedPartyType,
+  //       'createdAt': ServerValue.timestamp,
+  //     });
+  //
+  //     final key = newPartyRef.key;
+  //     if (key == null) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text("Failed to generate party ID")),
+  //       );
+  //       setState(() => _isLoading = false);
+  //       return;
+  //     }
+  //
+  //     if (!mounted) return;
+  //     Navigator.push(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => InventoryApp(
+  //           partyId: key,
+  //           partyName: name,
+  //           phone: phone,
+  //           address: address,
+  //           partyType: _selectedPartyType!,
+  //           isEditMode: false,
+  //           date: '',
+  //         ),
+  //       ),
+  //     );
+  //
+  //   } catch (e) {
+  //     if (!mounted) return;
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text("Error saving data: ${e.toString()}")),
+  //     );
+  //   } finally {
+  //     if (mounted) setState(() => _isLoading = false);
+  //   }
+  // }
 }
 

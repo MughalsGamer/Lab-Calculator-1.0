@@ -12,10 +12,14 @@ import 'inventory app.dart';
 
 class PartyProjectsScreen extends StatefulWidget {
   final PartyModel party;
+  final Function(PartyModel)? onPartyUpdated;
 
 
-
-  const PartyProjectsScreen({super.key, required this.party});
+  const PartyProjectsScreen({
+    super.key,
+    required this.party,
+    this.onPartyUpdated,
+  });
 
   @override
   State<PartyProjectsScreen> createState() => _PartyProjectsScreenState();
@@ -30,6 +34,137 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
   void initState() {
     super.initState();
     _fetchProjects();
+  }
+
+  Future<void> _updatePartyTotals() async {
+    try {
+      double totalAmount = 0;
+      double totalAdvance = 0;
+      double totalRemaining = 0;
+
+      for (var project in _projects) {
+        totalAmount += project.totalAmount;
+        totalAdvance += project.advance;
+        totalRemaining += project.remainingBalance;
+      }
+
+      // Update party totals in Firebase
+      await _ref.child(widget.party.id).update({
+        'totalAmount': totalAmount,
+        'totalAdvance': totalAdvance,
+        'totalRemaining': totalRemaining,
+      });
+
+      // Create updated party object
+      final updatedParty = widget.party.copyWith(
+        totalAmount: totalAmount,
+        totalAdvance: totalAdvance,
+        totalRemaining: totalRemaining,
+      );
+
+      // Call callback if provided
+      if (widget.onPartyUpdated != null) {
+        widget.onPartyUpdated!(updatedParty);
+      }
+
+      setState(() {});
+    } catch (e) {
+      print('Error updating party totals: $e');
+    }
+  }
+
+  // Future<void> _updatePartyTotals() async {
+  //   try {
+  //     double totalAmount = 0;
+  //     double totalAdvance = 0;
+  //     double totalRemaining = 0;
+  //
+  //     for (var project in _projects) {
+  //       totalAmount += project.totalAmount;
+  //       totalAdvance += project.advance;
+  //       totalRemaining += project.remainingBalance;
+  //     }
+  //
+  //     // Update party totals in Firebase
+  //     await _ref.child(widget.party.id).update({
+  //       'totalAmount': totalAmount,
+  //       'totalAdvance': totalAdvance,
+  //       'totalRemaining': totalRemaining,
+  //     });
+  //
+  //     // Update local party object
+  //     widget.party.totalAmount = totalAmount;
+  //     widget.party.totalAdvance = totalAdvance;
+  //     widget.party.totalRemaining = totalRemaining;
+  //
+  //     setState(() {});
+  //   } catch (e) {
+  //     print('Error updating party totals: $e');
+  //   }
+  // }
+
+// Call this method in _fetchProjects after setting _projects
+  Future<void> _fetchProjects() async {
+    try {
+      _ref.child(widget.party.id).child('inventory').onValue.listen((event) async {
+        final data = event.snapshot.value;
+        List<CustomerModel> fetchedProjects = [];
+
+        if (data != null && data is Map) {
+          data.forEach((projectKey, projectValue) {
+            if (projectValue is Map) {
+              final projectMap = Map<String, dynamic>.from(projectValue);
+              projectMap['id'] = projectKey;
+              projectMap['partyId'] = widget.party.id;
+              fetchedProjects.add(CustomerModel.fromMap(projectMap));
+            }
+          });
+        }
+
+        setState(() {
+          _projects = fetchedProjects;
+          _isLoading = false;
+        });
+
+        // Update party totals after fetching projects
+        await _updatePartyTotals();
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+// Also call _updatePartyTotals after adding/editing/deleting projects
+// In _deleteProject method, after successful deletion:
+  Future<void> _deleteProject(CustomerModel model) async {
+    try {
+      await _ref
+          .child(widget.party.id)
+          .child('inventory')
+          .child(model.id)
+          .remove();
+
+      setState(() {
+        _projects.removeWhere((item) => item.id == model.id);
+      });
+
+      // Update party totals after deletion
+      await _updatePartyTotals();
+
+      Fluttertoast.showToast(
+        msg: "Project deleted successfully",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to delete project: ${e.toString()}",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
   }
 
   Future<List<CustomerModel>> _fetchProjectsForParty(String partyId) async {
@@ -80,60 +215,60 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
     }
   }
 
-  Future<void> _fetchProjects() async {
-    try {
-      _ref.child(widget.party.id).child('inventory').onValue.listen((event) {
-        final data = event.snapshot.value;
-        List<CustomerModel> fetchedProjects = [];
+  // Future<void> _fetchProjects() async {
+  //   try {
+  //     _ref.child(widget.party.id).child('inventory').onValue.listen((event) {
+  //       final data = event.snapshot.value;
+  //       List<CustomerModel> fetchedProjects = [];
+  //
+  //       if (data != null && data is Map) {
+  //         data.forEach((projectKey, projectValue) {
+  //           if (projectValue is Map) {
+  //             final projectMap = Map<String, dynamic>.from(projectValue);
+  //             projectMap['id'] = projectKey;
+  //             projectMap['partyId'] = widget.party.id;
+  //             fetchedProjects.add(CustomerModel.fromMap(projectMap));
+  //           }
+  //         });
+  //       }
+  //
+  //       setState(() {
+  //         _projects = fetchedProjects;
+  //         _isLoading = false;
+  //       });
+  //     });
+  //   } catch (e) {
+  //     setState(() => _isLoading = false);
+  //   }
+  // }
 
-        if (data != null && data is Map) {
-          data.forEach((projectKey, projectValue) {
-            if (projectValue is Map) {
-              final projectMap = Map<String, dynamic>.from(projectValue);
-              projectMap['id'] = projectKey;
-              projectMap['partyId'] = widget.party.id;
-              fetchedProjects.add(CustomerModel.fromMap(projectMap));
-            }
-          });
-        }
-
-        setState(() {
-          _projects = fetchedProjects;
-          _isLoading = false;
-        });
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _deleteProject(CustomerModel model) async {
-    try {
-      await _ref
-          .child(widget.party.id)
-          .child('inventory')
-          .child(model.id)
-          .remove();
-
-      setState(() {
-        _projects.removeWhere((item) => item.id == model.id);
-      });
-
-      Fluttertoast.showToast(
-        msg: "Project deleted successfully",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-      );
-    } catch (e) {
-      Fluttertoast.showToast(
-        msg: "Failed to delete project: ${e.toString()}",
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    }
-  }
+  // Future<void> _deleteProject(CustomerModel model) async {
+  //   try {
+  //     await _ref
+  //         .child(widget.party.id)
+  //         .child('inventory')
+  //         .child(model.id)
+  //         .remove();
+  //
+  //     setState(() {
+  //       _projects.removeWhere((item) => item.id == model.id);
+  //     });
+  //
+  //     Fluttertoast.showToast(
+  //       msg: "Project deleted successfully",
+  //       toastLength: Toast.LENGTH_SHORT,
+  //       gravity: ToastGravity.BOTTOM,
+  //       backgroundColor: Colors.green,
+  //       textColor: Colors.white,
+  //     );
+  //   } catch (e) {
+  //     Fluttertoast.showToast(
+  //       msg: "Failed to delete project: ${e.toString()}",
+  //       backgroundColor: Colors.red,
+  //       textColor: Colors.white,
+  //     );
+  //   }
+  // }
 
 
   void _navigateToEditScreen(BuildContext context, CustomerModel model) {

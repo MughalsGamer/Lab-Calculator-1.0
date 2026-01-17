@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -9,11 +11,8 @@ import 'PartyProjectsScreen.dart';
 import 'PartyWithProjects.dart';
 import 'PdfService.dart';
 
-
-
 class ListOfPartiesScreen extends StatefulWidget {
   const ListOfPartiesScreen({super.key,});
-
 
   @override
   State<ListOfPartiesScreen> createState() => _ListOfPartiesScreenState();
@@ -28,23 +27,33 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
   bool _isLoading = true;
   String? _errorMessage;
   late TabController _tabController;
+  StreamSubscription? _partiesSubscription;
+  bool _isDisposed = false;
 
   @override
   void initState() {
     super.initState();
+
+    // Create TabController directly in initState
     _tabController = TabController(length: 3, vsync: this);
+
+    // Start listening for parties
     _fetchParties();
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
+
+    // Cancel subscription first
+    _partiesSubscription?.cancel();
+    _partiesSubscription = null;
+
+    // Dispose tab controller
     _tabController.dispose();
+
     super.dispose();
   }
-
-
-
-
 
   Future<List<CustomerModel>> _fetchProjectsForParty(String partyId) async {
     try {
@@ -66,12 +75,14 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
     }
   }
 
-
   Future<void> _generateCategoryPdf(List<PartyModel> parties, String category) async {
     if (parties.isEmpty) {
       Fluttertoast.showToast(msg: "No $category to generate PDF");
       return;
     }
+
+    // Check if widget is still mounted before showing dialog
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -87,24 +98,34 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
         partiesWithProjects.add(PartyWithProjects(party, projects));
       }
 
-      Navigator.pop(context); // Close loading dialog
+      // Check if widget is still mounted before popping dialog
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context); // Close loading dialog
+      }
 
       final pdfBytes = await PdfService.generateCategoryPdf(
-        partiesWithProjects: partiesWithProjects, // Fixed parameter name
-        category: category, parties: [],
+        partiesWithProjects: partiesWithProjects,
+        category: category,
+        parties: [],
       );
 
       final fileName = '${category}_Full_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
       await PdfService.sharePdf(pdfBytes, fileName);
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog
+      // Check if widget is still mounted before popping dialog
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context); // Close loading dialog
+      }
       Fluttertoast.showToast(msg: "Failed to generate PDF: $e");
     }
   }
 
   Future<void> _fetchParties() async {
     try {
-      _ref.onValue.listen((event) {
+      // Cancel existing subscription if any
+      _partiesSubscription?.cancel();
+
+      _partiesSubscription = _ref.onValue.listen((event) {
         final data = event.snapshot.value;
         List<PartyModel> fetchedParties = [];
 
@@ -118,33 +139,37 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
           });
         }
 
-        setState(() {
-          _customers = fetchedParties.where((party) => party.type == 'customer').toList();
-          _suppliers = fetchedParties.where((party) => party.type == 'supplier').toList();
-          _fitters = fetchedParties.where((party) => party.type == 'fitter').toList();
-          _isLoading = false;
-          _errorMessage = null;
-        });
+        // Check if widget is still mounted before updating state
+        if (mounted && !_isDisposed) {
+          setState(() {
+            _customers = fetchedParties.where((party) => party.type == 'customer').toList();
+            _suppliers = fetchedParties.where((party) => party.type == 'supplier').toList();
+            _fitters = fetchedParties.where((party) => party.type == 'fitter').toList();
+            _isLoading = false;
+            _errorMessage = null;
+          });
+        }
       }, onError: (error) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = "Failed to load parties: $error";
-        });
+        if (mounted && !_isDisposed) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = "Failed to load parties: $error";
+          });
+        }
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = "Error: ${e.toString()}";
-      });
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = "Error: ${e.toString()}";
+        });
+      }
     }
   }
 
   Future<void> _deleteParty(String partyId) async {
     try {
       await _ref.child(partyId).remove();
-      // No need to call _fetchParties() here if using onValue listener,
-      // as it will automatically update the list.
-      // If not using onValue, you would call _fetchParties() here.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Party deleted successfully')),
       );
@@ -160,7 +185,6 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[800],
-
         title: const Text('Delete Party'),
         content: Text('Are you sure you want to delete ${party.name}?'),
         actions: [
@@ -170,16 +194,14 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
           ),
           TextButton(
             onPressed: () {
-              _deleteParty(party.id);
               Navigator.pop(context);
-      }, child: Text('Delete'),
+              _deleteParty(party.id);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
       ),
-        ]
-
-      )
     );
-
-
   }
 
   Widget _buildPartyList(List<PartyModel> parties) {
@@ -230,7 +252,7 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: ListTile(
             leading: Icon(
-              _getPartyIcon(party.type), // Use helper function for icons
+              _getPartyIcon(party.type),
               color: Colors.orange,
             ),
             title: Text(
@@ -250,15 +272,10 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
               children: [
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.redAccent),
-                  onPressed: () {
-                    // Implement delete functionality
-                    _confirmDeleteParty(party);
-                  },
+                  onPressed: () => _confirmDeleteParty(party),
                 ),
-
               ],
             ),
-
             onTap: () {
               Navigator.push(
                 context,
@@ -273,7 +290,6 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
     );
   }
 
-  // Helper function to get appropriate icon for party type
   IconData _getPartyIcon(String type) {
     switch (type) {
       case 'customer':
@@ -281,7 +297,7 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
       case 'supplier':
         return Icons.business;
       case 'fitter':
-        return Icons.build; // Specific icon for fitters
+        return Icons.build;
       default:
         return Icons.help_outline;
     }
@@ -294,14 +310,15 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
         title: const Text('All Parties'),
         backgroundColor: Colors.grey[900],
         actions: [
-          // In the build method's AppBar actions
-
-          IconButton(onPressed: (){
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => FirstPage()),
-            );
-          }, icon: Icon(Icons.home)),
+          IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => FirstPage()),
+                );
+              },
+              icon: const Icon(Icons.home)
+          ),
           IconButton(
             icon: const Icon(Icons.add, color: Colors.orange),
             onPressed: () => Navigator.pop(context),
@@ -315,7 +332,7 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
           tabs: const [
             Tab(icon: Icon(Icons.person), text: 'Customers'),
             Tab(icon: Icon(Icons.business), text: 'Suppliers'),
-            Tab(icon: Icon(Icons.build), text: 'Fitters'), // Consistent naming
+            Tab(icon: Icon(Icons.build), text: 'Fitters'),
           ],
         ),
       ),
@@ -326,10 +343,9 @@ class _ListOfPartiesScreenState extends State<ListOfPartiesScreen>
         children: [
           _buildPartyList(_customers),
           _buildPartyList(_suppliers),
-          _buildPartyList(_fitters), // Consistent naming
+          _buildPartyList(_fitters),
         ],
       ),
     );
   }
 }
-
