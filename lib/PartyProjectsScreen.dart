@@ -402,6 +402,8 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -459,6 +461,10 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
                   ),
                   const Divider(color: Colors.grey),
                   _buildInfoRow('Total Amount:', 'Rs${model.totalAmount}', isTotal: true),
+                  _buildInfoRow('Advance:', 'Rs${model.advance}', isTotal: true),
+                  _buildInfoRow('Remaining Balance:', 'Rs${model.remainingBalance}', isTotal: true),
+
+
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () => _navigateToDetailScreen(context, model),

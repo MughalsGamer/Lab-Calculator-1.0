@@ -52,6 +52,14 @@ dependencies:
   geocoding:   # For address reverse geocoding
   google_maps_flutter:
   open_file:
+  google_maps_flutter_web:
+  url_launcher:
+  provider:
+  webview_flutter:
+  webview_flutter_web:
+
+
+
 
 
 

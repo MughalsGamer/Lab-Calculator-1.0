@@ -8,9 +8,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+
+// Import your screens
 import 'ListOfPartiesScreen.dart';
 import 'Map Picker Screen.dart';
 import 'inventory app.dart';
+import 'web_map_picker.dart';
 
 class FirstPage extends StatefulWidget {
   const FirstPage({super.key});
@@ -26,6 +29,10 @@ class _FirstPageState extends State<FirstPage> {
   String? _selectedPartyType = 'customer';
   bool _isLoading = false;
 
+  // Store coordinates
+  double? _latitude;
+  double? _longitude;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -37,38 +44,35 @@ class _FirstPageState extends State<FirstPage> {
   // Contact picker function
   Future<void> _pickContact() async {
     try {
-      // Request permission
       bool permissionGranted = await FlutterContacts.requestPermission();
 
       if (!permissionGranted) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contacts permission denied')),
+          const SnackBar(
+            content: Text('Contacts permission denied'),
+            backgroundColor: Colors.red,
+          ),
         );
         return;
       }
 
-      // Open contact picker
       final Contact? contact = await FlutterContacts.openExternalPick();
 
       if (contact == null) return;
 
       if (!mounted) return;
       setState(() {
-        // Name
         _nameController.text = contact.displayName;
 
-        // Phone (first number)
         if (contact.phones.isNotEmpty) {
           _phoneController.text = contact.phones.first.number;
         }
 
-        // Address
         if (contact.addresses.isNotEmpty) {
           final address = contact.addresses.first;
           String fullAddress = '';
 
-          // Use the address properties directly
           final street = address.street;
           final city = address.city;
           final postalCode = address.postalCode;
@@ -80,7 +84,6 @@ class _FirstPageState extends State<FirstPage> {
           if (city.isNotEmpty) {
             fullAddress += fullAddress.isNotEmpty ? ', $city' : city;
           }
-
           if (postalCode.isNotEmpty) {
             fullAddress += fullAddress.isNotEmpty ? ', $postalCode' : postalCode;
           }
@@ -91,76 +94,148 @@ class _FirstPageState extends State<FirstPage> {
           _addressController.text = fullAddress;
         }
       });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contact imported successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking contact: $e')),
+        SnackBar(
+          content: Text('Error picking contact: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
-  // Platform-aware current location function
+  // Open Map Picker (Platform-aware)
+  Future<void> _openMapPicker() async {
+    try {
+      if (kIsWeb) {
+        // Web Map Picker
+        final result = await showDialog<Map<String, dynamic>>(
+          context: context,
+          builder: (context) => WebMapPicker(
+            initialLat: _latitude,
+            initialLng: _longitude,
+          ),
+        );
+
+        if (result != null && result['address'] != null) {
+          setState(() {
+            _addressController.text = result['address'];
+            _latitude = result['latitude'];
+            _longitude = result['longitude'];
+          });
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location saved successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Mobile Map Picker
+        LatLng? initialPosition;
+
+        if (_latitude != null && _longitude != null) {
+          initialPosition = LatLng(_latitude!, _longitude!);
+        }
+
+        final result = await Navigator.push<Map<String, dynamic>>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MobileMapPicker(
+              initialPosition: initialPosition,
+            ),
+          ),
+        );
+
+        if (result != null && result['address'] != null) {
+          setState(() {
+            _addressController.text = result['address'];
+            _latitude = result['latitude'];
+            _longitude = result['longitude'];
+          });
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location saved successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening map: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Get current location
   Future<void> _getCurrentLocation() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
       if (kIsWeb) {
-        // Web implementation
         await _getCurrentLocationWeb();
       } else {
-        // Mobile implementation
         await _getCurrentLocationMobile();
       }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Current location loaded successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error getting location: ${e.toString()}')),
+        SnackBar(
+          content: Text('Error getting location: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-
-  Future<Position> getLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw 'Location services are disabled.';
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-  }
-
-
-  // Mobile location implementation
   Future<void> _getCurrentLocationMobile() async {
-    // Check location permission
     PermissionStatus status = await Permission.location.status;
     if (status.isDenied) {
       status = await Permission.location.request();
     }
 
     if (!status.isGranted) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permission denied')),
-      );
-      return;
+      throw Exception('Location permission denied');
     }
 
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
-    // Get address from coordinates
+    setState(() {
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+    });
+
     List<Placemark> placemarks = await placemarkFromCoordinates(
       position.latitude,
       position.longitude,
@@ -170,47 +245,49 @@ class _FirstPageState extends State<FirstPage> {
       Placemark place = placemarks.first;
       String address = _buildAddressString(place);
       _addressController.text = address;
+    } else {
+      _addressController.text = '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
     }
   }
 
-  // Web location implementation
   Future<void> _getCurrentLocationWeb() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      throw Exception('Location permission denied');
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    setState(() {
+      _latitude = position.latitude;
+      _longitude = position.longitude;
+    });
+
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw Exception('Location permission denied');
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
       );
 
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        if (placemarks.isNotEmpty) {
-          Placemark place = placemarks.first;
-          String address = _buildAddressString(place);
-          _addressController.text = address;
-        } else {
-          _addressController.text =
-          '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
-        }
-      } catch (_) {
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
+        String address = _buildAddressString(place);
+        _addressController.text = address;
+      } else {
         _addressController.text =
         '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
       }
-    } catch (e) {
-      rethrow;
+    } catch (_) {
+      _addressController.text =
+      '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
     }
   }
 
@@ -223,88 +300,23 @@ class _FirstPageState extends State<FirstPage> {
     if (place.locality != null && place.locality!.isNotEmpty) {
       address += address.isNotEmpty ? ', ${place.locality!}' : place.locality!;
     }
-    if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
-      address += address.isNotEmpty ? ', ${place.subAdministrativeArea!}' : place.subAdministrativeArea!;
+    if (place.subAdministrativeArea != null &&
+        place.subAdministrativeArea!.isNotEmpty) {
+      address += address.isNotEmpty
+          ? ', ${place.subAdministrativeArea!}'
+          : place.subAdministrativeArea!;
     }
-    if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
-      address += address.isNotEmpty ? ', ${place.administrativeArea!}' : place.administrativeArea!;
+    if (place.administrativeArea != null &&
+        place.administrativeArea!.isNotEmpty) {
+      address += address.isNotEmpty
+          ? ', ${place.administrativeArea!}'
+          : place.administrativeArea!;
     }
     if (place.country != null && place.country!.isNotEmpty) {
       address += address.isNotEmpty ? ', ${place.country!}' : place.country!;
     }
 
     return address;
-  }
-
-  Future<void> _openMapPicker() async {
-    if (kIsWeb) {
-      // For web, show a dialog for manual address input or use Google Places API
-      _showWebAddressInput();
-      return;
-    }
-
-    // Mobile: Open map picker
-    LatLng? currentPosition;
-
-    PermissionStatus status = await Permission.location.status;
-    if (status.isGranted) {
-      try {
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
-        );
-        currentPosition = LatLng(position.latitude, position.longitude);
-      } catch (e) {
-        // Use default position if can't get current location
-      }
-    }
-
-    final address = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MapPickerScreen(initialPosition: currentPosition),
-      ),
-    );
-
-    if (address != null && address is String) {
-      if (!mounted) return;
-      setState(() {
-        _addressController.text = address;
-      });
-    }
-  }
-
-  void _showWebAddressInput() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        String address = _addressController.text;
-        return AlertDialog(
-          title: const Text('Enter Address'),
-          content: TextField(
-            controller: TextEditingController(text: address),
-            onChanged: (value) => address = value,
-            decoration: const InputDecoration(
-              hintText: 'Enter full address',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() => _addressController.text = address);
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showLocationOptions() {
@@ -318,29 +330,38 @@ class _FirstPageState extends State<FirstPage> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Select Location Method',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(color: Colors.grey),
             ListTile(
               leading: const Icon(Icons.my_location, color: Colors.orange),
-              title: const Text('Use Current Location', style: TextStyle(color: Colors.white)),
+              title: const Text('Use Current Location',
+                  style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Get your current GPS location',
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
               onTap: () {
                 Navigator.pop(context);
                 _getCurrentLocation();
               },
             ),
-            if (!kIsWeb) // Only show map picker on mobile
-              ListTile(
-                leading: const Icon(Icons.map, color: Colors.orange),
-                title: const Text('Pick on Map', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _openMapPicker();
-                },
-              ),
             ListTile(
-              leading: const Icon(Icons.edit_location, color: Colors.orange),
-              title: const Text('Enter Address Manually', style: TextStyle(color: Colors.white)),
+              leading: const Icon(Icons.map, color: Colors.orange),
+              title: const Text('Pick on Map',
+                  style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Select location on interactive map',
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
               onTap: () {
                 Navigator.pop(context);
-                _showWebAddressInput();
+                _openMapPicker();
               },
             ),
             const SizedBox(height: 10),
@@ -386,20 +407,13 @@ class _FirstPageState extends State<FirstPage> {
                     backgroundImage: const NetworkImage(
                       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdcYJk-OSaTZz_auOIpwG7nLJVus3XoqnspA&s',
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black.withOpacity(0.1),
-                      ),
-                    ),
                   ),
                 ),
                 const SizedBox(height: 40),
-                Text("Party Details",
+                Text(
+                  "Party Details",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold
-                  ),
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 24),
                 _buildInputCard(
@@ -417,11 +431,22 @@ class _FirstPageState extends State<FirstPage> {
                     ),
                     const SizedBox(height: 12),
                     _buildTextField(_addressController, 'Address',
-                      maxLines: 2,
+                      maxLines: 3,
                       icon: Icons.location_on,
                       onIconPressed: _showLocationOptions,
-                      // Make it read-only so user clicks icon
+                      readOnly: true,
                     ),
+                    if (_latitude != null && _longitude != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Coordinates: ${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 30),
@@ -434,7 +459,8 @@ class _FirstPageState extends State<FirstPage> {
     );
   }
 
-  Widget _buildInputCard({required String title, required List<Widget> children}) {
+  Widget _buildInputCard(
+      {required String title, required List<Widget> children}) {
     return Card(
       elevation: 4,
       color: Colors.grey[850],
@@ -446,12 +472,12 @@ class _FirstPageState extends State<FirstPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
+            Text(
+              title,
               style: const TextStyle(
                   color: Colors.orange,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16
-              ),
+                  fontSize: 16),
             ),
             const SizedBox(height: 12),
             ...children,
@@ -465,7 +491,8 @@ class _FirstPageState extends State<FirstPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Party Type",
+        const Text(
+          "Party Type",
           style: TextStyle(color: Colors.white70, fontSize: 14),
         ),
         const SizedBox(height: 8),
@@ -529,7 +556,8 @@ class _FirstPageState extends State<FirstPage> {
               : null,
           filled: true,
           fillColor: Colors.transparent,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: InputBorder.none,
         ),
       ),
@@ -560,22 +588,22 @@ class _FirstPageState extends State<FirstPage> {
         ),
         const SizedBox(height: 16),
         SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: _navigateToListScreen,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange,
-                side: const BorderSide(color: Colors.orange),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: _navigateToListScreen,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.orange,
+              side: const BorderSide(color: Colors.orange),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                "View All Parties",
-                style: TextStyle(fontSize: 16),
-              ),
-            )
+            ),
+            child: const Text(
+              "View All Parties",
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
         ),
       ],
     );
@@ -588,7 +616,6 @@ class _FirstPageState extends State<FirstPage> {
     );
   }
 
-  // In FirstPage.dart, update the _saveData method:
   Future<void> _saveData() async {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
@@ -596,7 +623,10 @@ class _FirstPageState extends State<FirstPage> {
 
     if (name.isEmpty || phone.isEmpty || address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all the fields")),
+        const SnackBar(
+          content: Text("Please fill all the fields"),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -607,15 +637,16 @@ class _FirstPageState extends State<FirstPage> {
       final databaseRef = FirebaseDatabase.instance.ref("parties");
       final newPartyRef = databaseRef.push();
 
-      // In FirstPage.dart, update the _saveData method:
       await newPartyRef.set({
         'name': name,
         'phone': phone,
         'address': address,
+        'latitude': _latitude,
+        'longitude': _longitude,
         'type': _selectedPartyType,
         'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
         'createdAt': ServerValue.timestamp,
-        'totalAmount': 0.0, // Initialize totals
+        'totalAmount': 0.0,
         'totalAdvance': 0.0,
         'totalRemaining': 0.0,
       });
@@ -623,13 +654,24 @@ class _FirstPageState extends State<FirstPage> {
       final key = newPartyRef.key;
       if (key == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to generate party ID")),
+          const SnackBar(
+            content: Text("Failed to generate party ID"),
+            backgroundColor: Colors.red,
+          ),
         );
         setState(() => _isLoading = false);
         return;
       }
 
       if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Party saved successfully"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -644,76 +686,16 @@ class _FirstPageState extends State<FirstPage> {
           ),
         ),
       );
-
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving data: ${e.toString()}")),
+        SnackBar(
+          content: Text("Error saving data: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-  // Future<void> _saveData() async {
-  //   final name = _nameController.text.trim();
-  //   final phone = _phoneController.text.trim();
-  //   final address = _addressController.text.trim();
-  //
-  //   if (name.isEmpty || phone.isEmpty || address.isEmpty) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text("Please fill all the fields")),
-  //     );
-  //     return;
-  //   }
-  //
-  //   setState(() => _isLoading = true);
-  //
-  //   try {
-  //     final databaseRef = FirebaseDatabase.instance.ref("parties");
-  //     final newPartyRef = databaseRef.push();
-  //
-  //     await newPartyRef.set({
-  //       'name': name,
-  //       'phone': phone,
-  //       'address': address,
-  //       'type': _selectedPartyType,
-  //       'createdAt': ServerValue.timestamp,
-  //     });
-  //
-  //     final key = newPartyRef.key;
-  //     if (key == null) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text("Failed to generate party ID")),
-  //       );
-  //       setState(() => _isLoading = false);
-  //       return;
-  //     }
-  //
-  //     if (!mounted) return;
-  //     Navigator.push(
-  //       context,
-  //       MaterialPageRoute(
-  //         builder: (context) => InventoryApp(
-  //           partyId: key,
-  //           partyName: name,
-  //           phone: phone,
-  //           address: address,
-  //           partyType: _selectedPartyType!,
-  //           isEditMode: false,
-  //           date: '',
-  //         ),
-  //       ),
-  //     );
-  //
-  //   } catch (e) {
-  //     if (!mounted) return;
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text("Error saving data: ${e.toString()}")),
-  //     );
-  //   } finally {
-  //     if (mounted) setState(() => _isLoading = false);
-  //   }
-  // }
 }
-
