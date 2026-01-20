@@ -12,11 +12,19 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 // Import your screens
 import 'ListOfPartiesScreen.dart';
 import 'Map Picker Screen.dart';
+import 'Party Model.dart';
 import 'inventory app.dart';
 import 'web_map_picker.dart';
 
 class FirstPage extends StatefulWidget {
-  const FirstPage({super.key});
+  final PartyModel? existingParty;
+  final bool isEditMode;
+
+  const FirstPage({
+    super.key,
+    this.existingParty,
+    this.isEditMode = false,
+  });
 
   @override
   State<FirstPage> createState() => _FirstPageState();
@@ -32,6 +40,29 @@ class _FirstPageState extends State<FirstPage> {
   // Store coordinates
   double? _latitude;
   double? _longitude;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Pre-fill data if editing existing party
+    if (widget.isEditMode && widget.existingParty != null) {
+      _prefillPartyData();
+    }
+  }
+
+  void _prefillPartyData() {
+    final party = widget.existingParty!;
+
+    setState(() {
+      _nameController.text = party.name;
+      _phoneController.text = party.phone;
+      _addressController.text = party.address;
+      _selectedPartyType = party.type;
+      _latitude = party.latitude;
+      _longitude = party.longitude;
+    });
+  }
 
   @override
   void dispose() {
@@ -374,6 +405,11 @@ class _FirstPageState extends State<FirstPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.isEditMode ? 'Edit Party' : 'Add New Party'),
+        backgroundColor: Colors.grey[900],
+
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -411,7 +447,7 @@ class _FirstPageState extends State<FirstPage> {
                 ),
                 const SizedBox(height: 40),
                 Text(
-                  "Party Details",
+                  widget.isEditMode ? "Edit Party Details" : "Party Details",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),
@@ -572,7 +608,7 @@ class _FirstPageState extends State<FirstPage> {
             : SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _saveData,
+            onPressed: widget.isEditMode ? _updateData : _saveData,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -580,31 +616,32 @@ class _FirstPageState extends State<FirstPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              "Save & Create Inventory",
-              style: TextStyle(fontSize: 16, color: Colors.white),
+            child: Text(
+              widget.isEditMode ? "Update Party" : "Save & Create Inventory",
+              style: const TextStyle(fontSize: 16, color: Colors.white),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: _navigateToListScreen,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.orange,
-              side: const BorderSide(color: Colors.orange),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        if (!widget.isEditMode)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _navigateToListScreen,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange,
+                side: const BorderSide(color: Colors.orange),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                "View All Parties",
+                style: TextStyle(fontSize: 16),
               ),
             ),
-            child: const Text(
-              "View All Parties",
-              style: TextStyle(fontSize: 16),
-            ),
           ),
-        ),
       ],
     );
   }
@@ -691,6 +728,62 @@ class _FirstPageState extends State<FirstPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error saving data: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updateData() async {
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final address = _addressController.text.trim();
+
+    if (name.isEmpty || phone.isEmpty || address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please fill all the fields"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (widget.existingParty == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final databaseRef = FirebaseDatabase.instance.ref("parties/${widget.existingParty!.id}");
+
+      await databaseRef.update({
+        'name': name,
+        'phone': phone,
+        'address': address,
+        'latitude': _latitude,
+        'longitude': _longitude,
+        'type': _selectedPartyType,
+        'updatedAt': ServerValue.timestamp,
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Party updated successfully"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Go back to list screen
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error updating data: ${e.toString()}"),
           backgroundColor: Colors.red,
         ),
       );

@@ -10,6 +10,10 @@ class PartyModel {
   double totalAmount;
   double totalAdvance;
   double totalRemaining;
+  final double? latitude;
+  final double? longitude;
+  final int? createdAt;
+  final int? updatedAt;
 
   PartyModel({
     required this.id,
@@ -21,7 +25,20 @@ class PartyModel {
     this.totalAmount = 0.0,
     this.totalAdvance = 0.0,
     this.totalRemaining = 0.0,
+    this.latitude,
+    this.longitude,
+    this.createdAt,
+    this.updatedAt,
   });
+
+  // Payment status getter
+  String get paymentStatus {
+    if (totalRemaining <= 0) {
+      return 'Paid';
+    } else {
+      return 'Pending';
+    }
+  }
 
   factory PartyModel.fromMap(Map<String, dynamic> map) {
     return PartyModel(
@@ -34,16 +51,30 @@ class PartyModel {
       totalAmount: _toDouble(map['totalAmount']),
       totalAdvance: _toDouble(map['totalAdvance']),
       totalRemaining: _toDouble(map['totalRemaining']),
+      latitude: _toDoubleNullable(map['latitude']),
+      longitude: _toDoubleNullable(map['longitude']),
+      createdAt: map['createdAt'] as int?,
+      updatedAt: map['updatedAt'] as int?,
     );
   }
 
-  // Helper method to safely convert any numeric type to double
   static double _toDouble(dynamic value) {
     if (value == null) return 0.0;
     if (value is double) return value;
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
+  }
+
+  static double? _toDoubleNullable(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      return parsed == 0.0 ? null : parsed;
+    }
+    return null;
   }
 
   Map<String, dynamic> toMap() {
@@ -57,6 +88,10 @@ class PartyModel {
       'totalAmount': totalAmount,
       'totalAdvance': totalAdvance,
       'totalRemaining': totalRemaining,
+      'latitude': latitude,
+      'longitude': longitude,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
     };
   }
 
@@ -70,6 +105,10 @@ class PartyModel {
     double? totalAmount,
     double? totalAdvance,
     double? totalRemaining,
+    double? latitude,
+    double? longitude,
+    int? createdAt,
+    int? updatedAt,
   }) {
     return PartyModel(
       id: id ?? this.id,
@@ -81,6 +120,10 @@ class PartyModel {
       totalAmount: totalAmount ?? this.totalAmount,
       totalAdvance: totalAdvance ?? this.totalAdvance,
       totalRemaining: totalRemaining ?? this.totalRemaining,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
