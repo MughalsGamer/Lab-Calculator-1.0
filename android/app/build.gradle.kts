@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.graphicslabinventoryapp"
-        minSdk = 23                         // <-- fixed
+        minSdk = flutter.minSdkVersion                         // <-- fixed
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
