@@ -197,6 +197,7 @@ class PdfService {
     required String totalAmount,
     required String remainingBalance,
     required List<Map<String, dynamic>> dimensions,
+    required List<Map<String, dynamic>> paymentHistory,
   }) async {
     final pdf = pw.Document();
     final logo = await _loadImage('assets/images/logos.png');
