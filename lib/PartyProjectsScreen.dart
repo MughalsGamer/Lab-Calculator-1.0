@@ -742,6 +742,9 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
             Text('Material: ${model.fileType}', style: const TextStyle(color: Colors.white70)),
             const SizedBox(height: 10),
 
+            _buildProjectTotalsRow(model),
+            const Divider(color: Colors.grey),
+
             // ========== DIMENSIONS TABLE ==========
             if (model.dimensions.isNotEmpty) ...[
               const Text(
@@ -810,8 +813,8 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
               const SizedBox(height: 10),
             ],
 
-            _buildProjectTotalsRow(model),
-            const SizedBox(height: 10),
+
+
 
             // Financial Details
             Column(
