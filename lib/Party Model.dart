@@ -1,3 +1,4 @@
+// Party Model.dart
 import 'package:flutter/foundation.dart';
 
 class PartyModel {
@@ -14,6 +15,7 @@ class PartyModel {
   final double? longitude;
   final int? createdAt;
   final int? updatedAt;
+  final List<Map<String, dynamic>>? paymentHistory;
 
   PartyModel({
     required this.id,
@@ -29,6 +31,7 @@ class PartyModel {
     this.longitude,
     this.createdAt,
     this.updatedAt,
+    this.paymentHistory,
   });
 
   // Payment status getter
@@ -41,6 +44,19 @@ class PartyModel {
   }
 
   factory PartyModel.fromMap(Map<String, dynamic> map) {
+    List<Map<String, dynamic>>? history;
+    if (map['paymentHistory'] != null) {
+      if (map['paymentHistory'] is List) {
+        history = List<Map<String, dynamic>>.from(
+            (map['paymentHistory'] as List).map((e) => Map<String, dynamic>.from(e))
+        );
+      } else if (map['paymentHistory'] is Map) {
+        history = (map['paymentHistory'] as Map).values
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    }
+
     return PartyModel(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
@@ -55,6 +71,7 @@ class PartyModel {
       longitude: _toDoubleNullable(map['longitude']),
       createdAt: map['createdAt'] as int?,
       updatedAt: map['updatedAt'] as int?,
+      paymentHistory: history,
     );
   }
 
@@ -90,8 +107,9 @@ class PartyModel {
       'totalRemaining': totalRemaining,
       'latitude': latitude,
       'longitude': longitude,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      'createdAt': createdAt ?? DateTime.now().millisecondsSinceEpoch,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      'paymentHistory': paymentHistory,
     };
   }
 
@@ -109,6 +127,8 @@ class PartyModel {
     double? longitude,
     int? createdAt,
     int? updatedAt,
+    List<Map<String, dynamic>>? paymentHistory,
+    String? paymentStatus, // Ye dummy parameter hai, use nahi hoga but error avoid karne ke liye
   }) {
     return PartyModel(
       id: id ?? this.id,
@@ -124,6 +144,7 @@ class PartyModel {
       longitude: longitude ?? this.longitude,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      paymentHistory: paymentHistory ?? this.paymentHistory,
     );
   }
 }

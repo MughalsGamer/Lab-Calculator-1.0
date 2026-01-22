@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class CustomerModel {
   String id;
   String customerName;
@@ -13,6 +15,7 @@ class CustomerModel {
   double totalAmount;
   double remainingBalance;
   List<Map<String, dynamic>> dimensions;
+  List<Map<String, dynamic>> paymentHistory; // Added payment history
 
   CustomerModel({
     required this.id,
@@ -29,9 +32,24 @@ class CustomerModel {
     required this.totalAmount,
     required this.remainingBalance,
     required this.dimensions,
+    this.paymentHistory = const [],
   });
 
   factory CustomerModel.fromMap(Map<String, dynamic> map) {
+    // Parse payment history
+    List<Map<String, dynamic>> paymentHistory = [];
+    if (map['paymentHistory'] != null) {
+      if (map['paymentHistory'] is List) {
+        paymentHistory = List<Map<String, dynamic>>.from(
+            (map['paymentHistory'] as List).map((e) => Map<String, dynamic>.from(e))
+        );
+      } else if (map['paymentHistory'] is Map) {
+        paymentHistory = (map['paymentHistory'] as Map).values
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    }
+
     return CustomerModel(
       id: map['id']?.toString() ?? '',
       customerName: map['customerName']?.toString() ?? '',
@@ -50,6 +68,7 @@ class CustomerModel {
           ?.map((e) => Map<String, dynamic>.from(e))
           .toList() ??
           [],
+      paymentHistory: paymentHistory,
     );
   }
 
@@ -69,7 +88,7 @@ class CustomerModel {
       'totalAmount': totalAmount,
       'remainingBalance': remainingBalance,
       'dimensions': dimensions,
+      'paymentHistory': paymentHistory,
     };
   }
 }
-

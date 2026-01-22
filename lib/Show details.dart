@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
 import 'Party Model.dart';
 import 'PartyWithProjects.dart';
 import 'PdfService.dart';
@@ -21,6 +20,7 @@ class ShowDetailsScreen extends StatelessWidget {
   final String totalAmount;
   final String remainingBalance;
   final List<Map<String, dynamic>> dimensions;
+  final List<Map<String, dynamic>> paymentHistory;
 
   const ShowDetailsScreen({
     super.key,
@@ -37,11 +37,8 @@ class ShowDetailsScreen extends StatelessWidget {
     required this.totalAmount,
     required this.remainingBalance,
     required this.dimensions,
+    required this.paymentHistory,
   });
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +50,7 @@ class ShowDetailsScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
             onPressed: () => _generateAndSharePdf(context),
+            tooltip: 'Generate PDF',
           ),
         ],
       ),
@@ -94,25 +92,45 @@ class ShowDetailsScreen extends StatelessWidget {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text('No dimensions available',
-                          style: TextStyle(color: Colors.white70, )),
+                          style: TextStyle(color: Colors.white70)),
                     )
                   else
-                    for (var dim in dimensions)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('${dim['wall']}: ${dim['width']} x ${dim['height']} ft',
-                                style: const TextStyle(color: Colors.white70)),
-                            Text('Qty: ${dim['quantity']}'),
-                            Text('${dim['sqFt']} sq.ft', style: const TextStyle(color: Colors.white)),
-                          ],
+                    SingleChildScrollView(
+                      // scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columnSpacing: 20,
+                        headingRowHeight: 40,
+                        dataRowHeight: 40,
+
+                        headingTextStyle: const TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14
                         ),
+                        dataTextStyle: const TextStyle(color: Colors.white70, fontSize: 14),
+                        columns: const [
+                          DataColumn(label: Text('Wall')),
+                          DataColumn(label: Text('Width')),
+                          DataColumn(label: Text('Height')),
+                          DataColumn(label: Text('Qty')),
+                          DataColumn(label: Text('Sq.ft')),
+                        ],
+                        rows: dimensions.map((dim) {
+                          return DataRow(cells: [
+                            DataCell(Text(dim['wall']?.toString() ?? '')),
+                            DataCell(Text(dim['width']?.toString() ?? '')),
+                            DataCell(Text(dim['height']?.toString() ?? '')),
+                            DataCell(Text(dim['quantity']?.toString() ?? '')),
+                            DataCell(Text(dim['sqFt']?.toString() ?? '')),
+                          ]);
+                        }).toList(),
                       ),
+                    ),
                 ],
               ),
               const SizedBox(height: 20),
+              // Payment History Section
+
               _buildSectionCard(
                 title: "Financial Summary",
                 children: [
@@ -127,6 +145,86 @@ class ShowDetailsScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 30),
+              if (paymentHistory.isNotEmpty) ...[
+                _buildSectionCard(
+                  title: "Payment History",
+                  children: [
+                    ...paymentHistory.map((payment) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[800],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green, width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  payment['date']?.toString() ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  payment['time']?.toString() ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Received Amount:',
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                Text(
+                                  'Rs${(payment['amount'] as double).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Balance After:',
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                Text(
+                                  'Rs${(payment['remainingAfter'] as double).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
             ],
           ),
         ),
@@ -185,35 +283,36 @@ class ShowDetailsScreen extends StatelessWidget {
 
   Future<void> _generateAndSharePdf(BuildContext context) async {
     try {
-      final pdfBytes = await PdfService.generateInventoryPdf(
-        customerName: customerName,
-        phone: phone,
-        address: address,
-        date: date,
-        room: room,
-        fileType: fileType,
-        rate: rate,
-        additionalCharges: additionalCharges,
-        advance: advance,
-        totalSqFt: totalSqFt,
-        totalAmount: totalAmount,
-        remainingBalance: remainingBalance,
-        dimensions: dimensions,
+      final fileName = '${customerName}_Project_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+
+      await PdfService.handlePdfActions(
+        context: context,
+        generatePdf: () async {
+          return await PdfService.generateInventoryPdf(
+            customerName: customerName,
+            phone: phone,
+            address: address,
+            date: date,
+            room: room,
+            fileType: fileType,
+            rate: rate,
+            additionalCharges: additionalCharges,
+            advance: advance,
+            totalSqFt: totalSqFt,
+            totalAmount: totalAmount,
+            remainingBalance: remainingBalance,
+            dimensions: dimensions,
+            paymentHistory: paymentHistory,
+          );
+        },
+        fileName: fileName,
       );
-
-      final fileName = '${customerName}_${date.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}.pdf';
-
-      if (kIsWeb) {
-        await Printing.layoutPdf(
-          onLayout: (format) => pdfBytes,
-          name: fileName,
-        );
-      } else {
-        await PdfService.printPdf(pdfBytes: pdfBytes);
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to generate PDF: ${e.toString()}")),
+        SnackBar(
+          content: Text("Failed to generate PDF: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
