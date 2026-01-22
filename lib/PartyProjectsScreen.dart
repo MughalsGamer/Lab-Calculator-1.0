@@ -497,6 +497,7 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
   }
 
   // NEW: Generate Party PDF
+  // Party Projects PDF کے لیے نیا فنکشن
   Future<void> _generatePartyPdf() async {
     if (_projects.isEmpty) {
       Fluttertoast.showToast(msg: "No projects to generate PDF");
@@ -504,12 +505,12 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
     }
 
     try {
-      final fileName = '${widget.party.name}_Party_${DateFormat('yyyyMMdd').format(DateTime.now())}';
+      final fileName = '${widget.party.name}_Projects_${DateFormat('yyyyMMdd').format(DateTime.now())}';
 
       await PdfService.saveAndOpenPdf(
         context: context,
         generatePdf: () async {
-          return await PdfService.generatePartyPdf(
+          return await PdfService.generatePartyProjectsPdf(
             party: widget.party,
             projects: _projects,
           );
@@ -524,15 +525,15 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
     }
   }
 
-  // NEW: Generate single project PDF
+// Single Project PDF کے لیے نیا فنکشن
   Future<void> _generateSingleProjectPdf(CustomerModel project) async {
     try {
-      final fileName = '${widget.party.name}_${project.room}_${DateFormat('yyyyMMdd').format(DateTime.now())}';
+      final fileName = '${project.customerName}_${project.room}_${DateFormat('yyyyMMdd').format(DateTime.now())}';
 
       await PdfService.saveAndOpenPdf(
         context: context,
         generatePdf: () async {
-          return await PdfService.generateInventoryPdf(
+          return await PdfService.generateProjectDetailPdf(
             customerName: project.customerName,
             phone: project.phone,
             address: project.address,
@@ -545,13 +546,8 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
             totalSqFt: project.totalSqFt.toString(),
             totalAmount: project.totalAmount.toString(),
             remainingBalance: project.remainingBalance.toString(),
-            dimensions: project.dimensions.map((d) => {
-              'wall': d['wall']?.toString() ?? 'N/A',
-              'width': d['width']?.toString() ?? '0',
-              'height': d['height']?.toString() ?? '0',
-              'quantity': d['quantity']?.toString() ?? '1',
-              'sqFt': d['sqFt']?.toString() ?? '0',
-            }).toList(),
+            dimensions: project.dimensions,
+            paymentHistory: project.paymentHistory,
           );
         },
         fileName: fileName,
@@ -563,6 +559,72 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
       );
     }
   }
+  // Future<void> _generatePartyPdf() async {
+  //   if (_projects.isEmpty) {
+  //     Fluttertoast.showToast(msg: "No projects to generate PDF");
+  //     return;
+  //   }
+  //
+  //   try {
+  //     final fileName = '${widget.party.name}_Party_${DateFormat('yyyyMMdd').format(DateTime.now())}';
+  //
+  //     await PdfService.saveAndOpenPdf(
+  //       context: context,
+  //       generatePdf: () async {
+  //         return await PdfService.generatePartyPdf(
+  //           party: widget.party,
+  //           projects: _projects,
+  //         );
+  //       },
+  //       fileName: fileName,
+  //     );
+  //   } catch (e) {
+  //     Fluttertoast.showToast(
+  //       msg: "Failed to generate PDF: ${e.toString()}",
+  //       backgroundColor: Colors.red,
+  //     );
+  //   }
+  // }
+
+  // NEW: Generate single project PDF
+  // Future<void> _generateSingleProjectPdf(CustomerModel project) async {
+  //   try {
+  //     final fileName = '${widget.party.name}_${project.room}_${DateFormat('yyyyMMdd').format(DateTime.now())}';
+  //
+  //     await PdfService.saveAndOpenPdf(
+  //       context: context,
+  //       generatePdf: () async {
+  //         return await PdfService.generateInventoryPdf(
+  //           customerName: project.customerName,
+  //           phone: project.phone,
+  //           address: project.address,
+  //           date: project.date,
+  //           room: project.room,
+  //           fileType: project.fileType,
+  //           rate: project.rate.toString(),
+  //           additionalCharges: project.additionalCharges.toString(),
+  //           advance: project.advance.toString(),
+  //           totalSqFt: project.totalSqFt.toString(),
+  //           totalAmount: project.totalAmount.toString(),
+  //           remainingBalance: project.remainingBalance.toString(),
+  //           dimensions: project.dimensions.map((d) => {
+  //             'wall': d['wall']?.toString() ?? 'N/A',
+  //             'width': d['width']?.toString() ?? '0',
+  //             'height': d['height']?.toString() ?? '0',
+  //             'quantity': d['quantity']?.toString() ?? '1',
+  //             'sqFt': d['sqFt']?.toString() ?? '0',
+  //           }).toList(),
+  //         );
+  //       },
+  //       fileName: fileName,
+  //     );
+  //   } catch (e) {
+  //     Fluttertoast.showToast(
+  //       msg: "Failed to generate PDF: ${e.toString()}",
+  //       backgroundColor: Colors.red,
+  //     );
+  //   }
+  // }
 
   Future<void> _fetchProjects() async {
     try {

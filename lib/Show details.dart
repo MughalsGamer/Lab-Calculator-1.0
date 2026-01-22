@@ -37,6 +37,7 @@ class ShowDetailsScreen extends StatelessWidget {
   });
 
   // FIXED: Simplified PDF generation
+  // FIXED: New PDF generation function
   Future<void> _generatePdf(BuildContext context) async {
     try {
       final fileName = '${customerName}_${room}_${DateFormat('yyyyMMdd').format(DateTime.now())}';
@@ -44,7 +45,7 @@ class ShowDetailsScreen extends StatelessWidget {
       await PdfService.saveAndOpenPdf(
         context: context,
         generatePdf: () async {
-          return await PdfService.generateInventoryPdf(
+          return await PdfService.generateProjectDetailPdf(
             customerName: customerName,
             phone: phone,
             address: address,
@@ -58,6 +59,7 @@ class ShowDetailsScreen extends StatelessWidget {
             totalAmount: totalAmount,
             remainingBalance: remainingBalance,
             dimensions: dimensions,
+            paymentHistory: paymentHistory,
           );
         },
         fileName: fileName,
@@ -71,6 +73,41 @@ class ShowDetailsScreen extends StatelessWidget {
       );
     }
   }
+
+  // Future<void> _generatePdf(BuildContext context) async {
+  //   try {
+  //     final fileName = '${customerName}_${room}_${DateFormat('yyyyMMdd').format(DateTime.now())}';
+  //
+  //     await PdfService.saveAndOpenPdf(
+  //       context: context,
+  //       generatePdf: () async {
+  //         return await PdfService.generateInventoryPdf(
+  //           customerName: customerName,
+  //           phone: phone,
+  //           address: address,
+  //           date: date,
+  //           room: room,
+  //           fileType: fileType,
+  //           rate: rate,
+  //           additionalCharges: additionalCharges,
+  //           advance: advance,
+  //           totalSqFt: totalSqFt,
+  //           totalAmount: totalAmount,
+  //           remainingBalance: remainingBalance,
+  //           dimensions: dimensions,
+  //         );
+  //       },
+  //       fileName: fileName,
+  //     );
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text("Failed to generate PDF: ${e.toString()}"),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
