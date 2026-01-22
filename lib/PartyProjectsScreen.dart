@@ -471,57 +471,97 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
 
   Widget _buildReceiptRow(String label, String value, {bool isHighlight = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: isHighlight ? Colors.orange : Colors.white,
-              fontSize: 14,
-              fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+            Text(
+              value,
+              style: TextStyle(
+                color: isHighlight ? Colors.orange : Colors.white,
+                fontSize: 14,
+                fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
     );
   }
 
-  void _handlePdfActions() {
+  // NEW: Generate Party PDF
+  Future<void> _generatePartyPdf() async {
     if (_projects.isEmpty) {
       Fluttertoast.showToast(msg: "No projects to generate PDF");
       return;
     }
 
-    PdfService.handlePdfActions(
-      context: context,
-      generatePdf: () async {
-        // Fetch latest party data to include payment history
-        final snapshot = await _ref.child(widget.party.id).get();
-        PartyModel latestParty = widget.party;
+    try {
+      final fileName = '${widget.party.name}_Party_${DateFormat('yyyyMMdd').format(DateTime.now())}';
 
-        if (snapshot.exists) {
-          final data = Map<String, dynamic>.from(snapshot.value as Map);
-          data['id'] = widget.party.id;
-          latestParty = PartyModel.fromMap(data);
-        }
+      await PdfService.saveAndOpenPdf(
+        context: context,
+        generatePdf: () async {
+          return await PdfService.generatePartyPdf(
+            party: widget.party,
+            projects: _projects,
+          );
+        },
+        fileName: fileName,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to generate PDF: ${e.toString()}",
+        backgroundColor: Colors.red,
+      );
+    }
+  }
 
-        return await PdfService.generatePartyProjectsPdf(
-          party: latestParty,
-          projects: _projects,
-        );
-      },
-      fileName: '${widget.party.name}_Projects_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf',
-    );
+  // NEW: Generate single project PDF
+  Future<void> _generateSingleProjectPdf(CustomerModel project) async {
+    try {
+      final fileName = '${widget.party.name}_${project.room}_${DateFormat('yyyyMMdd').format(DateTime.now())}';
+
+      await PdfService.saveAndOpenPdf(
+        context: context,
+        generatePdf: () async {
+          return await PdfService.generateInventoryPdf(
+            customerName: project.customerName,
+            phone: project.phone,
+            address: project.address,
+            date: project.date,
+            room: project.room,
+            fileType: project.fileType,
+            rate: project.rate.toString(),
+            additionalCharges: project.additionalCharges.toString(),
+            advance: project.advance.toString(),
+            totalSqFt: project.totalSqFt.toString(),
+            totalAmount: project.totalAmount.toString(),
+            remainingBalance: project.remainingBalance.toString(),
+            dimensions: project.dimensions.map((d) => {
+              'wall': d['wall']?.toString() ?? 'N/A',
+              'width': d['width']?.toString() ?? '0',
+              'height': d['height']?.toString() ?? '0',
+              'quantity': d['quantity']?.toString() ?? '1',
+              'sqFt': d['sqFt']?.toString() ?? '0',
+            }).toList(),
+          );
+        },
+        fileName: fileName,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to generate PDF: ${e.toString()}",
+        backgroundColor: Colors.red,
+      );
+    }
   }
 
   Future<void> _fetchProjects() async {
@@ -602,6 +642,61 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
     );
   }
 
+  void _navigateToDetailScreen(BuildContext context, CustomerModel model) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ShowDetailsScreen(
+          customerName: model.customerName,
+          phone: model.phone,
+          address: model.address,
+          date: model.date,
+          room: model.room,
+          fileType: model.fileType,
+          rate: model.rate.toString(),
+          additionalCharges: model.additionalCharges.toString(),
+          advance: model.advance.toString(),
+          totalSqFt: model.totalSqFt.toString(),
+          totalAmount: model.totalAmount.toString(),
+          remainingBalance: model.remainingBalance.toString(),
+          dimensions: model.dimensions.map((d) => {
+            'wall': d['wall']?.toString() ?? 'N/A',
+            'width': d['width']?.toString() ?? '0',
+            'height': d['height']?.toString() ?? '0',
+            'quantity': d['quantity']?.toString() ?? '1',
+            'sqFt': d['sqFt']?.toString() ?? '0',
+          }).toList(),
+          paymentHistory: model.paymentHistory,
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(CustomerModel model) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[850],
+        title: const Text('Confirm Delete', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to delete this project?',
+            style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.orange)),
+          ),
+          TextButton(
+            onPressed: () {
+              _deleteProject(model);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -609,11 +704,19 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
         title: Text("${widget.party.name}'s Projects"),
         backgroundColor: Colors.grey[900],
         actions: [
+          // Party PDF button
           IconButton(
-            onPressed: _handlePdfActions,
+            onPressed: _generatePartyPdf,
             icon: const Icon(Icons.picture_as_pdf),
-            tooltip: 'Generate PDF',
+            tooltip: 'Generate Party PDF',
           ),
+          // Receive Payment button
+          if (_totalAllRemaining > 0)
+            IconButton(
+              onPressed: _showReceivePaymentDialog,
+              icon: const Icon(Icons.payment, color: Colors.green),
+              tooltip: 'Receive Payment',
+            ),
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -650,7 +753,64 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
           ? const Center(child: CircularProgressIndicator(color: Colors.orange))
           : Column(
         children: [
-          if (_projects.isNotEmpty) _buildTotalsContainer(),
+          // Summary Container
+          if (_projects.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange, width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Party Summary',
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: _buildTotalCard(
+                          title: 'Total Amount',
+                          value: _totalAllAmount,
+                          icon: Icons.account_balance_wallet,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTotalCard(
+                          title: 'Total Advance',
+                          value: _totalAllAdvance,
+                          icon: Icons.payment,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTotalCard(
+                          title: 'Remaining',
+                          value: _totalAllRemaining,
+                          icon: Icons.balance,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+          // Projects List
           Expanded(
             child: _projects.isEmpty
                 ? Center(
@@ -700,7 +860,6 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
           ),
         ],
       ),
-
     );
   }
 
@@ -714,22 +873,32 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(model.date, style: const TextStyle(fontSize: 14, color: Colors.white70)),
                 Row(
                   children: [
+                    // Project PDF button
+                    IconButton(
+                      icon: const Icon(Icons.picture_as_pdf, color: Colors.blue),
+                      onPressed: () => _generateSingleProjectPdf(model),
+                      tooltip: 'Generate Project PDF',
+                    ),
+                    // Payment button
                     if (model.remainingBalance > 0)
                       IconButton(
                         icon: const Icon(Icons.payment, color: Colors.green),
                         onPressed: () => _showReceiveProjectPaymentDialog(model),
                         tooltip: 'Receive Payment',
                       ),
+                    // Edit button
                     IconButton(
                       icon: const Icon(Icons.edit, color: Colors.blue),
                       onPressed: () => _navigateToEditScreen(context, model),
                     ),
+                    // Delete button
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _confirmDelete(model),
@@ -738,14 +907,17 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
                 ),
               ],
             ),
+
+            // Project Info
             Text('Room: ${model.room}', style: const TextStyle(color: Colors.white)),
             Text('Material: ${model.fileType}', style: const TextStyle(color: Colors.white70)),
             const SizedBox(height: 10),
 
+            // Mini Totals
             _buildProjectTotalsRow(model),
             const Divider(color: Colors.grey),
 
-            // ========== DIMENSIONS TABLE ==========
+            // Dimensions Table
             if (model.dimensions.isNotEmpty) ...[
               const Text(
                 'Dimensions:',
@@ -813,9 +985,6 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
               const SizedBox(height: 10),
             ],
 
-
-
-
             // Financial Details
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -835,10 +1004,11 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Payment History Section
+            // Payment History
             if (model.paymentHistory.isNotEmpty) _buildPaymentHistorySection(model),
             const SizedBox(height: 10),
 
+            // View Details Button
             ElevatedButton(
               onPressed: () => _navigateToDetailScreen(context, model),
               style: ElevatedButton.styleFrom(
@@ -849,140 +1019,6 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFinancialRow(String label, String value, {bool isHighlighted = false, Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isHighlighted ? Colors.orange : Colors.white70,
-              fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-              fontSize: 14,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: color ?? (isHighlighted ? Colors.orange : Colors.white),
-              fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentHistorySection(CustomerModel model) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Payment History:',
-          style: TextStyle(
-            color: Colors.orange,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        ...model.paymentHistory.map((payment) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${payment['date']} ${payment['time']}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Received: Rs${(payment['amount'] as double).toStringAsFixed(2)}',
-                      style: const TextStyle(color: Colors.green, fontSize: 12),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Balance: Rs${(payment['remainingAfter'] as double).toStringAsFixed(2)}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ],
-    );
-  }
-
-  Widget _buildTotalsContainer() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Party Summary',
-            style: TextStyle(
-              color: Colors.orange,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: _buildTotalCard(
-                  title: 'Total Amount',
-                  value: _totalAllAmount,
-                  icon: Icons.account_balance_wallet,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTotalCard(
-                  title: 'Total Advance',
-                  value: _totalAllAdvance,
-                  icon: Icons.payment,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTotalCard(
-                  title: 'Remaining',
-                  value: _totalAllRemaining,
-                  icon: Icons.balance,
-                  color: Colors.orange,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -1089,79 +1125,80 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {bool isTotal = false}) {
+  Widget _buildFinancialRow(String label, String value, {bool isHighlighted = false, Color? color}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(
-              fontSize: 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: Colors.white70
-          )),
-          Text(value, style: TextStyle(
-              fontSize: 16,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Colors.orange : Colors.white
-          )),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(CustomerModel model) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[850],
-        title: const Text('Confirm Delete', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure you want to delete this project?',
-            style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.orange)),
-          ),
-          TextButton(
-            onPressed: () {
-              _deleteProject(model);
-              Navigator.pop(context);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _navigateToDetailScreen(BuildContext context, CustomerModel model) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ShowDetailsScreen(
-          customerName: model.customerName,
-          phone: model.phone,
-          address: model.address,
-          date: model.date,
-          room: model.room,
-          fileType: model.fileType,
-          rate: model.rate.toString(),
-          additionalCharges: model.additionalCharges.toString(),
-          advance: model.advance.toString(),
-          totalSqFt: model.totalSqFt.toString(),
-          totalAmount: model.totalAmount.toString(),
-          remainingBalance: model.remainingBalance.toString(),
-          dimensions: model.dimensions.map((d) => {
-            'wall': d['wall']?.toString() ?? 'N/A',
-            'width': d['width']?.toString() ?? '0',
-            'height': d['height']?.toString() ?? '0',
-            'quantity': d['quantity']?.toString() ?? '1',
-            'sqFt': d['sqFt']?.toString() ?? '0',
-          }).toList(),
-          paymentHistory: model.paymentHistory,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isHighlighted ? Colors.orange : Colors.white70,
+                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                color: color ?? (isHighlighted ? Colors.orange : Colors.white),
+                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
-      ),
+    );
+  }
+
+  Widget _buildPaymentHistorySection(CustomerModel model) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Payment History:',
+          style: TextStyle(
+            color: Colors.orange,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...model.paymentHistory.map((payment) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${payment['date']} ${payment['time']}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Received: Rs${(payment['amount'] as double).toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.green, fontSize: 12),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Balance: Rs${(payment['remainingAfter'] as double).toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ],
     );
   }
 }

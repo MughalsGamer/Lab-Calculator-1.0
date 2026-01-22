@@ -1,9 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
-import 'Party Model.dart';
-import 'PartyWithProjects.dart';
 import 'PdfService.dart';
 
 class ShowDetailsScreen extends StatelessWidget {
@@ -40,6 +36,42 @@ class ShowDetailsScreen extends StatelessWidget {
     required this.paymentHistory,
   });
 
+  // FIXED: Simplified PDF generation
+  Future<void> _generatePdf(BuildContext context) async {
+    try {
+      final fileName = '${customerName}_${room}_${DateFormat('yyyyMMdd').format(DateTime.now())}';
+
+      await PdfService.saveAndOpenPdf(
+        context: context,
+        generatePdf: () async {
+          return await PdfService.generateInventoryPdf(
+            customerName: customerName,
+            phone: phone,
+            address: address,
+            date: date,
+            room: room,
+            fileType: fileType,
+            rate: rate,
+            additionalCharges: additionalCharges,
+            advance: advance,
+            totalSqFt: totalSqFt,
+            totalAmount: totalAmount,
+            remainingBalance: remainingBalance,
+            dimensions: dimensions,
+          );
+        },
+        fileName: fileName,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to generate PDF: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,10 +79,11 @@ class ShowDetailsScreen extends StatelessWidget {
         title: const Text('Project Details'),
         backgroundColor: Colors.grey[900],
         actions: [
+          // FIXED: Updated PDF button
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
-            onPressed: () => _generateAndSharePdf(context),
-            tooltip: 'Generate PDF',
+            onPressed: () => _generatePdf(context),
+            tooltip: 'Save PDF',
           ),
         ],
       ),
@@ -96,12 +129,10 @@ class ShowDetailsScreen extends StatelessWidget {
                     )
                   else
                     SingleChildScrollView(
-                      // scrollDirection: Axis.horizontal,
                       child: DataTable(
                         columnSpacing: 20,
                         headingRowHeight: 40,
                         dataRowHeight: 40,
-
                         headingTextStyle: const TextStyle(
                             color: Colors.orange,
                             fontWeight: FontWeight.bold,
@@ -129,8 +160,6 @@ class ShowDetailsScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              // Payment History Section
-
               _buildSectionCard(
                 title: "Financial Summary",
                 children: [
@@ -185,9 +214,9 @@ class ShowDetailsScreen extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
+                                const Text(
                                   'Received Amount:',
-                                  style: const TextStyle(color: Colors.white70),
+                                  style: TextStyle(color: Colors.white70),
                                 ),
                                 Text(
                                   'Rs${(payment['amount'] as double).toStringAsFixed(2)}',
@@ -203,9 +232,9 @@ class ShowDetailsScreen extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
+                                const Text(
                                   'Balance After:',
-                                  style: const TextStyle(color: Colors.white70),
+                                  style: TextStyle(color: Colors.white70),
                                 ),
                                 Text(
                                   'Rs${(payment['remainingAfter'] as double).toStringAsFixed(2)}',
@@ -279,41 +308,5 @@ class ShowDetailsScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _generateAndSharePdf(BuildContext context) async {
-    try {
-      final fileName = '${customerName}_Project_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-
-      await PdfService.handlePdfActions(
-        context: context,
-        generatePdf: () async {
-          return await PdfService.generateInventoryPdf(
-            customerName: customerName,
-            phone: phone,
-            address: address,
-            date: date,
-            room: room,
-            fileType: fileType,
-            rate: rate,
-            additionalCharges: additionalCharges,
-            advance: advance,
-            totalSqFt: totalSqFt,
-            totalAmount: totalAmount,
-            remainingBalance: remainingBalance,
-            dimensions: dimensions,
-            paymentHistory: paymentHistory,
-          );
-        },
-        fileName: fileName,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to generate PDF: ${e.toString()}"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }
