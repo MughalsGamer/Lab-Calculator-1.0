@@ -772,13 +772,7 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'Generate Party PDF',
           ),
-          // Receive Payment button
-          if (_totalAllRemaining > 0)
-            IconButton(
-              onPressed: _showReceivePaymentDialog,
-              icon: const Icon(Icons.payment, color: Colors.green),
-              tooltip: 'Receive Payment',
-            ),
+
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -959,11 +953,13 @@ class _PartyProjectsScreenState extends State<PartyProjectsScreen> {
                     IconButton(
                       icon: const Icon(Icons.edit, color: Colors.blue),
                       onPressed: () => _navigateToEditScreen(context, model),
+                      tooltip: 'Edit Info',
                     ),
                     // Delete button
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _confirmDelete(model),
+                      tooltip: 'Delete Inventory',
                     ),
                   ],
                 ),
