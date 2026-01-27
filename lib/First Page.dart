@@ -470,7 +470,7 @@ class _FirstPageState extends State<FirstPage> {
                       maxLines: 3,
                       icon: Icons.location_on,
                       onIconPressed: _showLocationOptions,
-                      readOnly: true,
+
                     ),
                     if (_latitude != null && _longitude != null)
                       Padding(

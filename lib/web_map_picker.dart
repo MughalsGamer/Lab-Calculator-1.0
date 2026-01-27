@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:html' as html;
 import 'dart:ui' as ui;
 import 'dart:js' as js;
-import 'dart:ui_web' as ui;
+// import 'dart:ui_web' as ui;
 
 
 class WebMapPicker extends StatefulWidget {
