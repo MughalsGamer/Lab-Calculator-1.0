@@ -17,6 +17,7 @@ class CustomerModel {
   List<Map<String, dynamic>> dimensions;
   List<Map<String, dynamic>> paymentHistory; // Added payment history
 
+
   CustomerModel({
     required this.id,
     required this.customerName,
